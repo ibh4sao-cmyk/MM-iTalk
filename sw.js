@@ -1,5 +1,5 @@
 /* MM-iTalk service worker: lưu app vào máy để chạy offline sau lần mở đầu tiên. */
-var CACHE = 'mm-italk-v0.3.1';
+var CACHE = 'mm-italk-v0.3.2';
 var FILES = [
   './', './index.html', './manifest.webmanifest', './test-mic.html',
   './css/app.css',
@@ -7,6 +7,7 @@ var FILES = [
   './js/data-th-c1.js', './js/data-th-c2.js', './js/data-th-c3.js', './js/data-th-c4.js',
   './js/data-thcs-c1.js', './js/data-thcs-c2.js', './js/data-thcs-c3.js', './js/data-thcs-c4.js',
   './js/samples-th-c1.js',
+  './js/samples-thcs-c1.js',
   './js/store.js', './js/speech.js', './js/mascot.js', './js/parent.js', './js/app.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
 ];
