@@ -2,7 +2,7 @@
 
 App luyện nói liên tục 3–5 phút cho học sinh Tiểu học (lớp 2–5) và THCS (lớp 6–9). Chạy trên Chrome (máy tính, Android), cài được lên máy như một ứng dụng. Không cần máy chủ, không có tài khoản; dữ liệu nằm trong trình duyệt của từng máy.
 
-**Phiên bản 0.5.0:** thêm app **MM-iTalk Phụ huynh** (thư mục `phuhuynh/`, cài được lên điện thoại, chỉ xem báo cáo từ file xuất ở Khu cha mẹ, không có ghi âm). Trước đó (0.4.0): mỗi bài có 2 ví dụ mẫu (Cách cơ bản và ✨ Góc nhìn mới, nhiều bài nhân hóa) và cha mẹ có thể thêm ví dụ riêng; đủ 4 chặng, mỗi cấp 36 bài, vòng học 8 bước (không gõ chữ), mở khóa chặng bằng Thử thách, Nói tự do, và **Khu cha mẹ có mật khẩu** (báo cáo tổng quan, xem lại từng bài, đánh giá tiến bộ, mục AI đang chờ). **Ưu tiên máy tính (Chrome)**; điện thoại tạm thời chỉ để xem nội dung.
+**Phiên bản 0.6.0:** khu vực cha mẹ (Khu cha mẹ trên máy tính và app Phụ huynh) có giao diện chuyên nghiệp (`css/pro.css`, chữ nhỏ hơn, không emoji) và tab Cài đặt (cỡ chữ, tự khóa, hồ sơ mặc định, xóa dữ liệu, kiểm tra bản mới); app của bé giữ nguyên. Trước đó (0.5.0): thêm app **MM-iTalk Phụ huynh** (thư mục `phuhuynh/`, cài được lên điện thoại, chỉ xem báo cáo từ file xuất ở Khu cha mẹ, không có ghi âm). Trước đó (0.4.0): mỗi bài có 2 ví dụ mẫu (Cách cơ bản và ✨ Góc nhìn mới, nhiều bài nhân hóa) và cha mẹ có thể thêm ví dụ riêng; đủ 4 chặng, mỗi cấp 36 bài, vòng học 8 bước (không gõ chữ), mở khóa chặng bằng Thử thách, Nói tự do, và **Khu cha mẹ có mật khẩu** (báo cáo tổng quan, xem lại từng bài, đánh giá tiến bộ, mục AI đang chờ). **Ưu tiên máy tính (Chrome)**; điện thoại tạm thời chỉ để xem nội dung.
 
 ## Đưa lên GitHub Pages (kho riêng tên MM-iTalk)
 
@@ -20,7 +20,7 @@ Lưu ý: không mở `index.html` bằng cách bấm đúp (địa chỉ `file:/
 
 ## Cập nhật app
 
-Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.5.0';`) để máy đã cài tải bản mới.
+Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.6.0';`) để máy đã cài tải bản mới.
 
 ## Cấu trúc
 

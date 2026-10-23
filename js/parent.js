@@ -4,7 +4,7 @@
   'use strict';
   var A = null; // api do app.js đưa vào
   var D = window.MMI_DATA, S = window.MMIStore, Sp = window.MMISpeech;
-  var pAuth = { ok: false, t: 0 }, pSel = null, IDLE = 10 * 60 * 1000, RO = false; // RO: bản chỉ-xem trên điện thoại
+  var pAuth = { ok: false, t: 0 }, pSel = null, RO = false; // RO: bản chỉ-xem trên điện thoại
 
   /* ---------- tiện ích ---------- */
   function esc(s) { return A.esc(s); }
@@ -29,8 +29,24 @@
   function normCode(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
   function fmtCode(c) { return c.slice(0, 4) + '-' + c.slice(4); }
   function pstate() { return S.get().parent || null; }
+  /* ---------- tùy chọn hiển thị / khóa (chỉ phía cha mẹ), lưu trong máy ---------- */
+  var PK = 'mmit:pro';
+  function prefs() { try { return JSON.parse(localStorage.getItem(PK)) || {}; } catch (e) { return {}; } }
+  function setPref(k, v) { var o = prefs(); o[k] = v; try { localStorage.setItem(PK, JSON.stringify(o)); } catch (e) {} }
+  function idleMs() { var m = parseInt(prefs().idle, 10); return (m === 5 || m === 30 ? m : 10) * 60 * 1000; }
+  function applyPro() { var b = document.body, f = prefs().fs; b.classList.add('pro'); b.setAttribute('data-fs', f === 's' || f === 'l' ? f : 'm'); }
+  function unPro() { document.body.classList.remove('pro'); document.body.removeAttribute('data-fs'); }
+  function opts(key, cur, list) {
+    return '<div class="row">' + list.map(function (o) { return '<button class="chip ' + (String(cur) === String(o[0]) ? 'sel' : '') + '" data-act="ppref" data-k="' + key + '" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
+  }
+  function prefCards() {
+    var pr = prefs(), ps = S.profiles(), fs = pr.fs === 's' || pr.fs === 'l' ? pr.fs : 'm', idle = String(idleMs() / 60000);
+    return '<div class="card mb"><h3>Hiển thị</h3><p class="muted small">Cỡ chữ của khu vực cha mẹ. Không ảnh hưởng đến giao diện của con.</p>' + opts('fs', fs, [['s', 'Nhỏ'], ['m', 'Vừa'], ['l', 'Lớn']]) + '</div>' +
+      '<div class="card mb"><h3>Tự khóa</h3><p class="muted small">Tự quay về màn hình mật khẩu sau khi không thao tác.</p>' + opts('idle', idle, [['5', '5 phút'], ['10', '10 phút'], ['30', '30 phút']]) + '</div>' +
+      (ps.length > 1 ? '<div class="card mb"><h3>Hồ sơ mặc định</h3><p class="muted small">Hồ sơ hiện ra đầu tiên khi mở báo cáo.</p>' + opts('child', pr.child || (S.profile() || ps[0]).id, ps.map(function (p) { return [p.id, esc(p.name)]; })) + '</div>' : '');
+  }
   function live() {
-    if (pAuth.ok && Date.now() - pAuth.t > IDLE) pAuth.ok = false;
+    if (pAuth.ok && Date.now() - pAuth.t > idleMs()) pAuth.ok = false;
     if (pAuth.ok) pAuth.t = Date.now();
     return pAuth.ok;
   }
@@ -38,6 +54,7 @@
   function sel() {
     var ps = S.profiles(), P = null, i;
     for (i = 0; i < ps.length; i++) if (ps[i].id === pSel) P = ps[i];
+    if (!P && !pSel && prefs().child) for (i = 0; i < ps.length; i++) if (ps[i].id === prefs().child) P = ps[i];
     if (!P) P = S.profile() || ps[0] || null;
     pSel = P ? P.id : null; return P;
   }
@@ -82,15 +99,15 @@
 
   /* ---------- khung chung ---------- */
   var TABS = [['overview', 'Tổng quan'], ['lessons', 'Từng bài'], ['progress', 'Tiến bộ'], ['samples', 'Ví dụ của cha mẹ'], ['ai', 'Nhận xét AI'], ['settings', 'Cài đặt cha mẹ']];
-  function tabsOf() { return RO ? TABS.filter(function (t) { return t[0] === 'overview' || t[0] === 'lessons' || t[0] === 'progress'; }) : TABS; }
+  function tabsOf() { return RO ? TABS.filter(function (t) { return t[0] === 'overview' || t[0] === 'lessons' || t[0] === 'progress' || t[0] === 'settings'; }).map(function (t) { return t[0] === 'settings' ? ['settings', 'Cài đặt'] : t; }) : TABS; }
   function frame(tab, inner) {
     var P = sel(), ps = S.profiles();
     var chooser = ps.length > 1 ? '<label class="chip">Con: <select data-chg="psel" style="border:0;background:transparent;font:inherit;font-weight:700">' + ps.map(function (p) { return '<option value="' + esc(p.id) + '" ' + (P && p.id === P.id ? 'selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></label>' : (P ? '<span class="chip">Con: ' + esc(P.name) + '</span>' : '');
-    A.render(A.topbar(null, '/') + '<div class="row between mb"><h1 style="margin:0">' + (RO ? '📱 Báo cáo cho cha mẹ' : '🔒 Khu cha mẹ') + '</h1><div class="row">' + chooser + '<button class="btn alt sm" data-act="plock">🔓 Khóa và thoát</button></div></div>' +
+    A.render(A.topbar(null, '/') + '<div class="row between mb"><h1 style="margin:0">' + (RO ? 'Báo cáo cho cha mẹ' : 'Khu cha mẹ') + '</h1><div class="row">' + chooser + '<button class="btn alt sm" data-act="plock">Khóa và thoát</button></div></div>' +
       (RO && A.stamp ? '<p class="muted small" style="margin-top:-6px">' + A.stamp() + '</p>' : '') +
       '<div class="tabs">' + tabsOf().map(function (t) { return '<button class="chip ' + (t[0] === tab ? 'sel' : '') + '" data-act="nav" data-to="/parent/' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' + inner);
   }
-  function gateFrame(inner) { A.render(A.topbar(null, '/') + '<h1>🔒 Khu cha mẹ</h1>' + inner); }
+  function gateFrame(inner) { A.render(A.topbar(null, '/') + '<h1>Khu cha mẹ</h1>' + inner); }
 
   /* ---------- cổng mật khẩu ---------- */
   function viewGate(msg) {
@@ -132,7 +149,7 @@
   }
 
   /* ---------- Tổng quan ---------- */
-  function bar(pct, color) { return '<div style="background:#eef1fb;border-radius:999px;height:12px;overflow:hidden"><div style="width:' + Math.max(0, Math.min(100, pct)) + '%;height:100%;background:' + (color || 'var(--green)') + '"></div></div>'; }
+  function bar(pct, color) { return '<div style="background:#eceff3;border-radius:999px;height:12px;overflow:hidden"><div style="width:' + Math.max(0, Math.min(100, pct)) + '%;height:100%;background:' + (color || 'var(--green)') + '"></div></div>'; }
   function weekBars(P, ss) {
     var counts = {}, now = new Date(), keys = [], i;
     for (i = 7; i >= 0; i--) { var d = new Date(now); d.setDate(d.getDate() - i * 7); keys.push(S.weekKey(d)); }
@@ -142,9 +159,9 @@
     var W = 560, H = 130, bw = 40, gap = 20, svg = '<svg viewBox="0 0 ' + W + ' ' + (H + 28) + '" style="width:100%;max-width:600px" role="img" aria-label="Số buổi luyện mỗi tuần">';
     keys.forEach(function (k, idx) {
       var n = counts[k] || 0, h = Math.round(n / max * (H - 20)), x = 10 + idx * (bw + gap);
-      svg += '<rect x="' + x + '" y="' + (H - h) + '" width="' + bw + '" height="' + h + '" rx="6" fill="' + (n >= 3 ? '#2fb67c' : '#4c8dff') + '"/>' +
-        '<text x="' + (x + bw / 2) + '" y="' + (H - h - 4) + '" text-anchor="middle" font-size="13" fill="#2b2a4c">' + (n || '') + '</text>' +
-        '<text x="' + (x + bw / 2) + '" y="' + (H + 18) + '" text-anchor="middle" font-size="11" fill="#6b6a86">' + k.slice(8) + '/' + k.slice(5, 7) + '</text>';
+      svg += '<rect x="' + x + '" y="' + (H - h) + '" width="' + bw + '" height="' + h + '" rx="6" fill="' + (n >= 3 ? '#2e7d5b' : '#1e4e8c') + '"/>' +
+        '<text x="' + (x + bw / 2) + '" y="' + (H - h - 4) + '" text-anchor="middle" font-size="13" fill="#1f2937">' + (n || '') + '</text>' +
+        '<text x="' + (x + bw / 2) + '" y="' + (H + 18) + '" text-anchor="middle" font-size="11" fill="#6b7280">' + k.slice(8) + '/' + k.slice(5, 7) + '</text>';
     });
     return svg + '</svg>';
   }
@@ -161,13 +178,13 @@
     var chRows = changs.map(function (c) {
       var ls = A.lessonsOf(P.level, c.n), done = ls.filter(function (l) { return P.progress[l.id] && P.progress[l.id].done; }).length, ch = ls.filter(function (l) { return l.challenge; })[0], chDone = ch && P.progress[ch.id] && P.progress[ch.id].done;
       total += ls.length;
-      return '<div class="mb"><div class="row between"><b>Chặng ' + c.n + ': ' + esc(c.name) + '</b><span class="muted small">' + done + '/' + ls.length + ' bài' + (chDone ? ' · 🏆 đã xong Thử thách' : '') + '</span></div>' + bar(ls.length ? done * 100 / ls.length : 0, chDone ? 'var(--yellow)' : 'var(--green)') + '</div>';
+      return '<div class="mb"><div class="row between"><b>Chặng ' + c.n + ': ' + esc(c.name) + '</b><span class="muted small">' + done + '/' + ls.length + ' bài' + (chDone ? ' · đã xong Thử thách' : '') + '</span></div>' + bar(ls.length ? done * 100 / ls.length : 0, chDone ? 'var(--yellow)' : 'var(--green)') + '</div>';
     }).join('');
     var badges = (P.badges || []).map(function (id) { var n = parseInt(id.split('-')[2], 10); return '<span class="badge g">' + esc(D.badges[n - 1] || id) + '</span>'; }).join(' ') || '<span class="muted">Chưa có</span>';
     frame('overview',
       '<div class="card mb"><h2>Báo cáo chung · ' + esc(P.name) + ' (' + esc(A.levelLabel(P)) + ')</h2>' +
       '<div class="metrics mt"><div class="metric"><b>' + doneCount + '/' + total + '</b>bài đã xong</div><div class="metric"><b>' + ss.length + '</b>buổi luyện</div><div class="metric"><b>' + Object.keys(days).length + '</b>ngày có luyện</div><div class="metric"><b>' + wk + '/3</b>buổi tuần này</div></div>' +
-      '<div class="metrics mt"><div class="metric"><b>' + fmtDur(totalSec) + '</b>tổng thời gian nói</div><div class="metric"><b>' + words + '</b>tổng số từ máy nghe được</div><div class="metric"><b>' + P.stars + ' ⭐</b>sao hiện có</div><div class="metric"><b>' + P.vocab.length + '</b>từ trong Sổ từ</div></div>' +
+      '<div class="metrics mt"><div class="metric"><b>' + fmtDur(totalSec) + '</b>tổng thời gian nói</div><div class="metric"><b>' + words + '</b>tổng số từ máy nghe được</div><div class="metric"><b>' + P.stars + '</b>sao hiện có</div><div class="metric"><b>' + P.vocab.length + '</b>từ trong Sổ từ</div></div>' +
       '<p class="muted small mt">Số từ do máy nhận dạng giọng nói đếm nên chỉ là ước lượng.</p></div>' +
       '<div class="card mb"><h3>Tiến độ theo chặng</h3>' + chRows + '</div>' +
       '<div class="card mb"><h3>Số buổi luyện mỗi tuần (8 tuần gần nhất)</h3>' + weekBars(P, ss) + '<p class="muted small">Cột xanh lá: đủ 3 buổi trong tuần. Cột xanh dương: chưa đủ, không sao cả, duy trì đều đặn là quan trọng.</p></div>' +
@@ -183,7 +200,7 @@
       (pr.attempts || []).forEach(function (x) { if (x.n === 1) a0 = x; if (x.n === 2) a1 = x; });
       var c = a1 && a1.text ? covCount(a1.text, L.ngan) : (a0 && a0.text ? covCount(a0.text, L.ngan) : null);
       var d = a0 && a1 ? a1.dur - a0.dur : null;
-      return '<tr><td>' + dt(pr.doneAt) + '</td><td><b>' + esc(L.title) + '</b>' + (L.challenge ? ' 🏆' : '') + '<br><span class="muted small">' + (L.level === 'th' ? 'TH' : 'THCS') + ' · chặng ' + L.chang + '</span></td>' +
+      return '<tr><td>' + dt(pr.doneAt) + '</td><td><b>' + esc(L.title) + '</b>' + (L.challenge ? ' (Thử thách)' : '') + '<br><span class="muted small">' + (L.level === 'th' ? 'TH' : 'THCS') + ' · chặng ' + L.chang + '</span></td>' +
         '<td>' + (a0 ? mmss(a0.dur) + '<br><span class="muted small">' + a0.words + ' từ</span>' : '–') + '</td><td>' + (a1 ? mmss(a1.dur) + '<br><span class="muted small">' + a1.words + ' từ</span>' : '–') + '</td>' +
         '<td>' + (d == null ? '–' : (d >= 0 ? '+' : '') + d + 's') + '</td><td>' + (c == null ? '–' : c + '/' + L.ngan.length) + '</td><td>' + (pr.helped ? 'Có' : 'Không') + '</td>' +
         '<td><button class="btn alt sm" data-act="nav" data-to="/parent/lesson/' + id + '">Xem</button></td></tr>';
@@ -195,7 +212,7 @@
     var f = allFree(P).reverse().slice(0, 30);
     if (!f.length) return '';
     return '<div class="card mt"><h3>Nhật ký Nói tự do (30 lần gần nhất)</h3>' + f.map(function (x) {
-      return '<div class="row mb" style="border-bottom:1px solid var(--line);padding-bottom:8px"><span class="badge">' + dtm(x.t) + '</span><b>' + esc(D.kinds[x.kind] || x.kind) + '</b><span>' + mmss(x.dur) + ' · ' + x.words + ' từ' + (x.stars ? ' · +' + x.stars + '⭐' : '') + '</span>' +
+      return '<div class="row mb" style="border-bottom:1px solid var(--line);padding-bottom:8px"><span class="badge">' + dtm(x.t) + '</span><b>' + esc(D.kinds[x.kind] || x.kind) + '</b><span>' + mmss(x.dur) + ' · ' + x.words + ' từ' + (x.stars ? ' · +' + x.stars + ' sao' : '') + '</span>' +
         (x.key && !RO ? '<button class="btn alt sm" data-act="playclip" data-key="' + esc(x.key) + '">▶ Nghe lại</button><span class="clip"></span>' : '') +
         (x.text ? '<details style="flex-basis:100%"><summary class="small muted">Xem chữ máy nghe được</summary><p>' + esc(x.text) + '</p></details>' : '') + '</div>';
     }).join('') + '</div>';
@@ -205,7 +222,7 @@
     var cov = a.text ? covOf(a.text, L.ngan) : null;
     return '<div class="card soft mb"><div class="row between"><b>' + label + '</b><span class="badge">' + mmss(a.dur) + ' · ' + a.words + ' từ · ' + (wpm(a) || '–') + ' từ/phút</span></div>' +
       (RO ? '' : a.key ? '<div class="row mt"><button class="btn alt sm" data-act="playclip" data-key="' + esc(a.key) + '">▶ Nghe lại</button><span class="clip"></span></div>' : '<p class="muted small mt">Không có ghi âm (điện thoại không ghi, hoặc ghi âm cũ đã được xóa).</p>') +
-      (cov ? '<div class="kws mt">' + L.ngan.map(function (g, i) { return '<span class="kw" style="' + (cov[i] >= 2 ? 'background:#dff6e9' : 'opacity:.55') + '">' + (cov[i] >= 2 ? '✔ ' : '') + (i + 1) + '. ' + esc(g.name) + '</span>'; }).join('') + '</div>' : '') +
+      (cov ? '<div class="kws mt">' + L.ngan.map(function (g, i) { return '<span class="kw" style="' + (cov[i] >= 2 ? 'background:#e3f1ea' : 'opacity:.55') + '">' + (cov[i] >= 2 ? '✔ ' : '') + (i + 1) + '. ' + esc(g.name) + '</span>'; }).join('') + '</div>' : '') +
       '<details class="mt"><summary class="small">Văn bản máy nghe được</summary><p>' + (a.text ? esc(a.text) : '<span class="muted">Máy không nghe được chữ nào lần này.</span>') + '</p></details></div>';
   }
   function viewLesson(id) {
@@ -220,12 +237,12 @@
     }).join('');
     var d = a0 && a1 ? a1.dur - a0.dur : null;
     frame('lessons', '<button class="btn alt sm mb" data-act="nav" data-to="/parent/lessons">← Danh sách bài</button>' +
-      '<div class="card mb"><h2>' + (L.icon || '') + ' ' + esc(L.title) + (L.challenge ? ' 🏆' : '') + '</h2><p class="muted">' + esc(L.task) + '</p>' +
+      '<div class="card mb"><h2>' + esc(L.title) + (L.challenge ? ' (Thử thách)' : '') + '</h2><p class="muted">' + esc(L.task) + '</p>' +
       '<div class="row"><span class="badge">Xong lúc ' + dtm(pr.doneAt) + '</span><span class="badge">Mục tiêu ' + A.targetLabel(L.target) + '</span><span class="badge">Mức gợi ý: ' + esc(D.hintNames[L.hint]) + '</span><span class="badge ' + (pr.helped ? '' : 'g') + '">' + (pr.helped ? 'Có mở thêm gợi ý' : 'Tự lực, không mở thêm gợi ý') + '</span></div></div>' +
       attemptCard(a0, L, 'Lần nói 1') + attemptCard(a1, L, 'Lần nói 2 (sau khi xem bài mẫu)') +
       (d == null ? '' : '<div class="card soft mb">So với lần 1, lần 2 ' + (d >= 0 ? 'dài hơn ' + d : 'ngắn hơn ' + (-d)) + ' giây' + (a0.text && a1.text ? ', ngăn nghe thấy ' + covCount(a0.text, L.ngan) + ' → ' + covCount(a1.text, L.ngan) + ' trên ' + L.ngan.length : '') + '.</div>') +
       '<div class="card mb"><h3>Con tự soi lại</h3><div class="kv"><span>Ngăn ý con tự tick là đã nói</span><b>' + (checked.length ? checked.map(esc).join('; ') : '–') + '</b><span>Có chỗ im lặng lâu không?</span><b>' + (reflect.silence === 'yes' ? 'Có' : (reflect.silence === 'no' ? 'Không' : '–')) + '</b><span>Lần hai con muốn làm tốt hơn</span><b>' + (plans.length ? plans.map(esc).join('; ') : '–') + '</b></div></div>' +
-      '<div class="card mb"><h3>Sao nhận được: +' + (pr.stars || 0) + ' ⭐</h3>' + (pr.R ? '<div class="kv">' + pr.R.map(function (r) { return '<span>' + esc(r[0]) + '</span><b>+' + r[1] + '</b>'; }).join('') + '</div>' : '<p class="muted">Không có chi tiết sao cho bài này.</p>') + (pr.added && pr.added.length ? '<p class="mt">Từ mới đã thêm vào Sổ từ: <b>' + pr.added.map(esc).join(', ') + '</b></p>' : '') + '</div>' +
+      '<div class="card mb"><h3>Sao nhận được: +' + (pr.stars || 0) + ' sao</h3>' + (pr.R ? '<div class="kv">' + pr.R.map(function (r) { return '<span>' + esc(r[0]) + '</span><b>+' + r[1] + '</b>'; }).join('') + '</div>' : '<p class="muted">Không có chi tiết sao cho bài này.</p>') + (pr.added && pr.added.length ? '<p class="mt">Từ mới đã thêm vào Sổ từ: <b>' + pr.added.map(esc).join(', ') + '</b></p>' : '') + '</div>' +
       (hist ? '<div class="card soft mb"><h3>Các lần luyện lại trước đó</h3>' + hist + '</div>' : '') +
       '<div class="card warn"><b>Gợi ý hỏi con:</b><ul>' + (L.parentQs || []).map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul></div>');
   }
@@ -238,10 +255,10 @@
     function X(i) { return pl + (points.length === 1 ? iw / 2 : i * iw / (points.length - 1)); }
     function Y(v) { return pt + ih - Math.min(max, v) / max * ih; }
     var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:640px" role="img" aria-label="Thời lượng nói so với mục tiêu qua các buổi">';
-    [0, .5, 1, 1.5].forEach(function (g) { svg += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" stroke="' + (g === 1 ? '#2fb67c' : '#eadfce') + '" stroke-width="' + (g === 1 ? 2 : 1) + '" stroke-dasharray="' + (g === 1 ? '6 4' : '0') + '"/><text x="' + (pl - 6) + '" y="' + (Y(g) + 4) + '" text-anchor="end" font-size="11" fill="#6b6a86">' + Math.round(g * 100) + '%</text>'; });
-    svg += '<polyline fill="none" stroke="#4c8dff" stroke-width="3" stroke-linejoin="round" points="' + points.map(function (p, i) { return X(i) + ',' + Y(p.v); }).join(' ') + '"/>';
-    points.forEach(function (p, i) { svg += '<circle cx="' + X(i) + '" cy="' + Y(p.v) + '" r="4.5" fill="' + (p.v >= 1 ? '#2fb67c' : '#4c8dff') + '"><title>' + esc(p.label) + '</title></circle>'; });
-    svg += '<text x="' + pl + '" y="' + (H - 6) + '" font-size="11" fill="#6b6a86">buổi đầu</text><text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end" font-size="11" fill="#6b6a86">buổi gần nhất</text>';
+    [0, .5, 1, 1.5].forEach(function (g) { svg += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(g) + '" y2="' + Y(g) + '" stroke="' + (g === 1 ? '#2e7d5b' : '#e5e7eb') + '" stroke-width="' + (g === 1 ? 2 : 1) + '" stroke-dasharray="' + (g === 1 ? '6 4' : '0') + '"/><text x="' + (pl - 6) + '" y="' + (Y(g) + 4) + '" text-anchor="end" font-size="11" fill="#6b7280">' + Math.round(g * 100) + '%</text>'; });
+    svg += '<polyline fill="none" stroke="#1e4e8c" stroke-width="3" stroke-linejoin="round" points="' + points.map(function (p, i) { return X(i) + ',' + Y(p.v); }).join(' ') + '"/>';
+    points.forEach(function (p, i) { svg += '<circle cx="' + X(i) + '" cy="' + Y(p.v) + '" r="4.5" fill="' + (p.v >= 1 ? '#2e7d5b' : '#1e4e8c') + '"><title>' + esc(p.label) + '</title></circle>'; });
+    svg += '<text x="' + pl + '" y="' + (H - 6) + '" font-size="11" fill="#6b7280">buổi đầu</text><text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end" font-size="11" fill="#6b7280">buổi gần nhất</text>';
     return svg + '</svg>';
   }
   function avg(a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : 0; }
@@ -288,7 +305,7 @@
     var opts = ls.map(function (l) { return '<option value="' + esc(l.id) + '" ' + (l.id === spLesson ? 'selected' : '') + '>Chặng ' + l.chang + ' · ' + (l.challenge ? 'Thử thách' : 'bài ' + l.order) + ' · ' + esc(l.title) + '</option>'; }).join('');
     var cards = list.map(function (c) {
       return '<div class="card soft mb"><div class="row between"><b>' + esc(c.title) + '</b><span class="muted small">' + c.paras.length + ' đoạn · ' + dt(c.created) + '</span></div><p class="muted">' + esc(c.paras[0].slice(0, 140)) + (c.paras[0].length > 140 ? '…' : '') + '</p>' +
-        '<div class="row"><button class="btn alt sm" data-act="psamedit" data-id="' + esc(c.id) + '">✏️ Sửa</button><button class="btn red sm" data-act="psamdel" data-id="' + esc(c.id) + '">🗑️ Xóa</button></div></div>';
+        '<div class="row"><button class="btn alt sm" data-act="psamedit" data-id="' + esc(c.id) + '">Sửa</button><button class="btn red sm" data-act="psamdel" data-id="' + esc(c.id) + '">Xóa</button></div></div>';
     }).join('');
     frame('samples', '<div class="card mb"><h2>Ví dụ của cha mẹ</h2><p class="muted">Thêm bài mẫu của riêng gia đình cho từng bài. Ví dụ hiện ở bước "Bài mẫu" của <b>tất cả các bạn cùng cấp</b> trên máy này (tab "👪 …"), con đọc và nghe đọc được như các ví dụ khác. Con không thấy hay sửa được phần này.</p>' +
       '<div class="row"><label class="chip">Cấp: <select data-chg="splevel" style="border:0;background:transparent;font:inherit;font-weight:700"><option value="th" ' + (level === 'th' ? 'selected' : '') + '>Tiểu học</option><option value="thcs" ' + (level === 'thcs' ? 'selected' : '') + '>THCS</option></select></label>' +
@@ -304,7 +321,7 @@
 
   /* ---------- AI (chờ) ---------- */
   function viewAI() {
-    frame('ai', '<div class="card"><h2>🤖 Nhận xét bằng AI <span class="badge y">Chức năng chờ</span></h2>' +
+    frame('ai', '<div class="card"><h2>Nhận xét bằng AI <span class="badge y">Chức năng chờ</span></h2>' +
       '<p>Mục này để dành cho giai đoạn sau, hiện chưa hoạt động và chưa được thiết kế chi tiết. Hiện app <b>không gửi bài nói của con tới AI hay máy chủ nào</b>.</p>' +
       '<p class="muted"><b>Dự kiến:</b> nhận xét nội dung và cách diễn đạt của từng bài nói, gợi ý từ và câu hay nên dùng, đề xuất bài luyện tiếp theo, tóm tắt tiến bộ theo tháng cho cha mẹ.</p>' +
       '<p class="muted"><b>Cần cân nhắc khi làm:</b> quyền riêng tư của trẻ (gửi giọng nói và văn bản ra ngoài), chi phí, chất lượng với tiếng Việt và giọng vùng miền.</p>' +
@@ -315,9 +332,10 @@
   function viewSettingsP() {
     var P = sel(); if (!P) return frame('settings', '<div class="card soft">Chưa có hồ sơ nào.</div>');
     frame('settings',
+      prefCards() +
       '<div class="card mb"><h3>Mở khóa chặng cho ' + esc(P.name) + '</h3><label class="chk"><input type="checkbox" data-chg="punlockall" ' + (P.unlockAll ? 'checked' : '') + '><span>Mở khóa tất cả các chặng (không cần xong Thử thách)</span></label></div>' +
-      '<div class="card mb"><h3>📱 Xem báo cáo trên điện thoại</h3><p class="muted">Xuất một file báo cáo (không có ghi âm) rồi mở trong app <b>MM-iTalk Phụ huynh</b> trên điện thoại, chỉ để xem. Dùng chung mật khẩu cha mẹ. Mỗi lần muốn cập nhật số liệu, hãy xuất lại file.</p><div class="row"><button class="btn sm" data-act="pexport">📤 Xuất báo cáo cho điện thoại</button></div><p class="small mt">Địa chỉ app trên điện thoại: <b>' + esc(viewerUrl()) + '</b></p><p class="muted small">File gồm tên con, kết quả, chữ máy nghe được và mật khẩu đã mã hóa; hãy gửi qua kênh riêng của gia đình (Zalo của mình, email, Drive) và xóa sau khi mở.</p></div>' +
-      '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này, không có trên điện thoại hay máy khác. Hãy sao lưu thỉnh thoảng. File sao lưu gồm cả hồ sơ, báo cáo và mật khẩu cha mẹ nhưng không gồm file ghi âm; có thể khôi phục trên máy khác để xem báo cáo.</p><div class="row"><button class="btn sm" data-act="backup">⬇️ Sao lưu ra file</button><label class="btn alt sm">⬆️ Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
+      '<div class="card mb"><h3>Xem báo cáo trên điện thoại</h3><p class="muted">Xuất một file báo cáo (không có ghi âm) rồi mở trong app <b>MM-iTalk Phụ huynh</b> trên điện thoại, chỉ để xem. Dùng chung mật khẩu cha mẹ. Mỗi lần muốn cập nhật số liệu, hãy xuất lại file.</p><div class="row"><button class="btn sm" data-act="pexport">Xuất báo cáo cho điện thoại</button></div><p class="small mt">Địa chỉ app trên điện thoại: <b>' + esc(viewerUrl()) + '</b></p><p class="muted small">File gồm tên con, kết quả, chữ máy nghe được và mật khẩu đã mã hóa; hãy gửi qua kênh riêng của gia đình (Zalo của mình, email, Drive) và xóa sau khi mở.</p></div>' +
+      '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này, không có trên điện thoại hay máy khác. Hãy sao lưu thỉnh thoảng. File sao lưu gồm cả hồ sơ, báo cáo và mật khẩu cha mẹ nhưng không gồm file ghi âm; có thể khôi phục trên máy khác để xem báo cáo.</p><div class="row"><button class="btn sm" data-act="backup">Sao lưu ra file</button><label class="btn alt sm">Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
       '<div class="card mb"><h3>Đổi mật khẩu</h3><div class="col" style="max-width:360px"><input id="pwOld" type="password" placeholder="Mật khẩu hiện tại" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px"><input id="pwNew" type="password" placeholder="Mật khẩu mới (từ 6 ký tự)" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px"><button class="btn sm" data-act="pchange">Đổi mật khẩu và tạo mã khôi phục mới</button></div></div>' +
       '<div class="card mb"><h3>Xóa hồ sơ</h3><p class="muted">Xóa hồ sơ "' + esc(P.name) + '" cùng toàn bộ bài làm và ghi âm. Không thể hoàn lại.</p><button class="btn red sm" data-act="pdel">Xóa hồ sơ này</button></div>');
   }
@@ -339,9 +357,11 @@
     return JSON.stringify({ app: 'MM-iTalk-report', v: 1, exported: Date.now(), appVersion: D.version, data: data });
   }
 
+  function viewSettingsRO() { frame('settings', prefCards() + (A.settingsExtra ? A.settingsExtra() : '')); }
+
   /* ---------- điều hướng ---------- */
   function view(parts) {
-    var tab = parts[1];
+    var tab = parts[1]; applyPro();
     if (!live()) return viewGate();
     switch (tab) {
       case 'lessons': return viewLessons();
@@ -349,14 +369,14 @@
       case 'progress': return viewProgress();
       case 'samples': return viewSamples();
       case 'ai': return viewAI();
-      case 'settings': return viewSettingsP();
+      case 'settings': return RO ? viewSettingsRO() : viewSettingsP();
       default: return viewOverview();
     }
   }
-  function onLeave() { lock(); }
+  function onLeave() { lock(); if (!RO) unPro(); }
 
   function init(api) {
-    A = api; RO = !!api.readonly;
+    A = api; RO = !!api.readonly; if (RO) applyPro();
     var acts = A.acts, chgs = A.chgs;
     function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
     acts.pgsetup = function () {
@@ -374,6 +394,12 @@
       });
     };
     acts.pgforgot = function () { viewForgot(); };
+    acts.ppref = function (el) {
+      var k = el.getAttribute('data-k'), v = el.getAttribute('data-v'), y = window.scrollY;
+      if (k === 'idle') v = parseInt(v, 10);
+      if (k === 'child') pSel = v;
+      setPref(k, v); applyPro(); A.nav(location.hash.slice(1)); window.scrollTo(0, y);
+    };
     acts.pgrecover = function () {
       var ps = pstate(), code = normCode(val('rc')), pw = val('pw1');
       if (code.length !== 8) return viewForgot('Mã khôi phục gồm 8 ký tự.');
@@ -431,7 +457,7 @@
       var map = { pw1: ['pglogin', 'pgsetup', 'pgrecover'], pw2: ['pgsetup'], rc: ['pgrecover'], pwOld: ['pchange'], pwNew: ['pchange'] }, names = map[e.target.id]; if (!names) return;
       for (var i = 0; i < names.length; i++) { var b = document.querySelector('[data-act="' + names[i] + '"]'); if (b) { b.click(); return; } }
     });
-    setInterval(function () { if (pAuth.ok && /^#\/parent/.test(location.hash) && Date.now() - pAuth.t > IDLE) { pAuth.ok = false; A.nav('/parent'); } }, 30000);
+    setInterval(function () { if (pAuth.ok && /^#\/parent/.test(location.hash) && Date.now() - pAuth.t > idleMs()) { pAuth.ok = false; A.nav('/parent'); } }, 30000);
   }
-  window.MMIParent = { init: init, view: view, onLeave: onLeave, isLive: function () { return live(); } };
+  window.MMIParent = { init: init, view: view, onLeave: onLeave, isLive: function () { return live(); }, applyPro: applyPro };
 })();

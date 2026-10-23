@@ -1,9 +1,9 @@
 /* MM-iTalk Phụ huynh service worker: chạy offline sau lần mở đầu tiên. */
-var CACHE = 'mm-italk-pp-v0.5.0';
+var CACHE = 'mm-italk-pp-v0.6.0';
 var FILES = [
   './', './index.html', './viewer.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
-  '../css/app.css',
+  '../css/app.css', '../css/pro.css',
   '../js/data-misc.js', '../js/data-frames.js', '../js/data-lessons-th.js', '../js/data-lessons-thcs.js',
   '../js/data-th-c1.js', '../js/data-th-c2.js', '../js/data-th-c3.js', '../js/data-th-c4.js',
   '../js/data-thcs-c1.js', '../js/data-thcs-c2.js', '../js/data-thcs-c3.js', '../js/data-thcs-c4.js',

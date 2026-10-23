@@ -1,0 +1,48 @@
+/* MM-iTalk - giao diện chuyên nghiệp cho khu vực cha mẹ (body.pro). Giao diện của con không đổi. */
+body.pro, body.pro[data-level="th"], body.pro[data-level="thcs"] {
+  --bg: #f3f5f8; --card: #ffffff; --ink: #1f2937; --mute: #6b7280; --line: #dfe3ea;
+  --primary: #1e4e8c; --primary-d: #163b6b; --blue: #1e4e8c; --green: #2e7d5b; --yellow: #b7791f;
+  --warn: #fff7e6; --ok: #e3f1ea; --bad: #fdecea; --radius: 8px; --shadow: 0 1px 2px rgba(16,24,40,.06);
+  --fs: 14.5px;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; line-height: 1.5;
+}
+body.pro[data-fs="s"] { --fs: 13px; }
+body.pro[data-fs="l"] { --fs: 16.5px; }
+body.pro #app { padding-top: 12px; max-width: 960px; }
+body.pro h1 { font-size: 1.35em; font-weight: 700; letter-spacing: -.1px; }
+body.pro h2 { font-size: 1.15em; font-weight: 700; }
+body.pro h3 { font-size: 1em; font-weight: 700; }
+body.pro .card { border: 1px solid var(--line); box-shadow: var(--shadow); padding: 16px; }
+body.pro .card.soft { background: #fafbfc; }
+body.pro .card.warn { border: 1px solid #f0dfb4; }
+body.pro .btn { border-radius: 6px; box-shadow: none; font-weight: 600; min-height: 36px; padding: 7px 14px; transition: background .12s; }
+body.pro .btn:hover { background: var(--primary-d); }
+body.pro .btn:active { transform: none; box-shadow: none; }
+body.pro .btn.sm { min-height: 32px; padding: 4px 12px; box-shadow: none; }
+body.pro .btn.alt, body.pro .btn.alt.sm, body.pro .btn.ghost { background: #fff; color: var(--ink); border: 1px solid #c9d0db; box-shadow: none; }
+body.pro .btn.alt:hover, body.pro .btn.ghost:hover { background: #f3f5f8; }
+body.pro .btn.red { background: #b3261e; box-shadow: none; }
+body.pro .chip { border: 1px solid #c9d0db; border-radius: 6px; padding: 4px 12px; font-weight: 600; background: #fff; cursor: pointer; color: var(--ink); }
+body.pro .chip.sel { background: var(--primary); border-color: var(--primary); color: #fff; }
+body.pro .badge { border-radius: 4px; background: #e8eef7; color: #1e3a66; font-weight: 600; }
+body.pro .badge.g { background: #e3f1ea; color: #1d5a40; }
+body.pro .badge.y { background: #fdf1d6; color: #7a4f06; }
+body.pro .logo { font-weight: 700; letter-spacing: 0; color: var(--primary); font-size: 1.2em; }
+body.pro .logo b { color: var(--ink); font-weight: 700; }
+body.pro .topbar { border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 16px; }
+body.pro .tagline { font-size: .85em; }
+body.pro .tabs { gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+body.pro .metric { border: 1px solid var(--line); border-radius: 6px; background: #fafbfc; text-align: left; padding: 10px 12px; font-size: .9em; color: var(--mute); }
+body.pro .metric b { font-size: 1.45em; font-weight: 700; color: var(--ink); }
+body.pro .kw { border: 1px solid #e2d3a5; background: #fbf6e6; border-radius: 4px; font-weight: 500; }
+body.pro .ptable th { background: #f3f5f8; font-weight: 600; font-size: .85em; color: #4b5563; border-bottom: 1px solid #c9d0db; }
+body.pro .ptable td { border-bottom: 1px solid #edf0f4; }
+body.pro .kv { gap: 8px 16px; }
+body.pro input[type=text], body.pro input[type=password], body.pro select, body.pro textarea { border: 1px solid #c9d0db; border-radius: 6px; padding: 8px 10px; }
+body.pro input:focus, body.pro select:focus, body.pro textarea:focus { outline: 2px solid rgba(30,78,140,.3); border-color: var(--primary); }
+body.pro .chk input { accent-color: var(--primary); }
+body.pro .stars-big { color: var(--ink); font-weight: 700; }
+body.pro #toast { border-radius: 6px; background: #1f2937; }
+body.pro details summary { cursor: pointer; }
+body.pro .ptable td:nth-child(2) { min-width: 140px; }
+body.pro .ptable th, body.pro .ptable td { padding: 8px 10px; }

@@ -26,20 +26,20 @@
   function render(html) { app.innerHTML = html; window.scrollTo(0, 0); }
   function nav(h) { if (location.hash === '#' + h) route(); else location.hash = h; }
   function topbar() {
-    return '<div class="topbar"><div class="row"><div><div class="logo">MM-<b>iTalk</b><small>Phụ huynh</small></div><div class="tagline">Báo cáo chỉ để xem</div></div></div></div>';
+    return '<div class="topbar"><div class="row"><div><div class="logo">MM-<b>iTalk</b><small>Phụ huynh</small></div><div class="tagline">Báo cáo luyện nói của con (chỉ xem)</div></div></div></div>';
   }
   function hasReport() { var st = S.get(); return !!(st.profiles && st.profiles.length && st.parent && st.parent.hash && st.parent.salt); }
   function stamp() { var t = S.get().reportExported; return t ? 'Báo cáo cập nhật ' + stampOf(t) + ' · đổi số liệu mới: xuất lại file từ máy tính.' : ''; }
 
   /* ---------- nhập file báo cáo ---------- */
   function importCard(first) {
-    return '<div class="card mt"><h3>' + (first ? '📂 Mở file báo cáo' : '📂 Mở file báo cáo mới') + '</h3>' +
+    return '<div class="card mt"><h3>' + (first ? 'Mở file báo cáo' : 'Mở file báo cáo mới') + '</h3>' +
       (first ? '<p>Trên máy tính, vào <b>MM-iTalk → Cài đặt → Khu cha mẹ → Cài đặt cha mẹ → "Xuất báo cáo cho điện thoại"</b>, gửi file sang điện thoại này (Zalo, email, Google Drive…), rồi chọn file ở đây.</p>' : '<p class="muted small">' + esc(stamp()) + ' Mở file mới sẽ thay số liệu cũ.</p>') +
-      '<label class="btn sm" style="cursor:pointer">📂 Chọn file báo cáo<input type="file" data-chg="vimport" style="display:none"></label>' +
+      '<label class="btn sm" style="cursor:pointer">Chọn file báo cáo<input type="file" data-chg="vimport" style="display:none"></label>' +
       '<p class="muted small mt">File chỉ được đọc trong máy này, không gửi đi đâu. Không có ghi âm trong file.</p></div>';
   }
   function viewImport() {
-    render(topbar() + '<h1>Chào cha mẹ 👋</h1><div class="card"><p>Đây là app <b>chỉ để xem</b> báo cáo luyện nói của con. Con học và nói trên máy tính; còn ở đây cha mẹ xem tiến độ, thời lượng nói, ngăn ý và nhận xét tiến bộ.</p></div>' + importCard(true));
+    render(topbar() + '<h1>Chào cha mẹ</h1><div class="card"><p>Đây là app <b>chỉ để xem</b> báo cáo luyện nói của con. Con học và nói trên máy tính; còn ở đây cha mẹ xem tiến độ, thời lượng nói, ngăn ý và nhận xét tiến bộ.</p></div>' + importCard(true));
   }
   function doImport(file) {
     var r = new FileReader();
@@ -71,6 +71,26 @@
     if (parts[0] !== 'parent') return nav('/parent');
     P.view(parts);
   }
+  function settingsExtra() {
+    var info = '<div class="card mb"><h3>Báo cáo trên máy này</h3>' + importCard(false).replace('<div class="card mt"><h3>Mở file báo cáo mới</h3>', '<div><h4 style="margin:0 0 6px">Mở file báo cáo mới</h4>') + '</div>' +
+      '<div class="card mb"><h3>Xóa dữ liệu</h3><p class="muted small">Xóa báo cáo đang lưu trên điện thoại này. Dữ liệu trên máy tính của con không bị ảnh hưởng. Muốn xem lại phải mở file báo cáo.</p><button class="btn red sm" data-act="vwipe">Xóa báo cáo khỏi điện thoại</button></div>' +
+      '<div class="card mb"><h3>Thông tin ứng dụng</h3><div class="kv"><span>Phiên bản</span><b>' + esc(D.version) + '</b><span>Dữ liệu</span><b>Chỉ lưu trong máy này</b></div>' +
+      '<p class="mt"><button class="btn alt sm" data-act="vupdate">Kiểm tra bản mới</button></p>' +
+      '<p class="small"><b>Cài lên màn hình chính.</b> Android (Chrome): menu ⋮ → "Cài đặt ứng dụng". iPhone (Safari): nút Chia sẻ → "Thêm vào MH chính".</p></div>';
+    return info;
+  }
+  acts.vwipe = function () {
+    if (!confirm('Xóa báo cáo khỏi điện thoại này? Bạn cần mở lại file báo cáo để xem tiếp.')) return;
+    try { localStorage.removeItem('mmit:view'); } catch (e) {}
+    location.hash = ''; location.reload();
+  };
+  acts.vupdate = function () {
+    toast('Đang kiểm tra bản mới…');
+    var jobs = [];
+    if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf('mm-italk-pp') === 0; }).map(function (k) { return caches.delete(k); })); }));
+    if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+    Promise.all(jobs).catch(function () {}).then(function () { location.reload(); });
+  };
   window.addEventListener('hashchange', route);
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-act]'); if (!el || !app.contains(el)) return;
@@ -90,7 +110,7 @@
   P.init({
     readonly: true, esc: esc, mmss: mmss, targetLabel: targetLabel, render: render, topbar: topbar, nav: nav, toast: toast,
     findLesson: findLesson, lessonsOf: lessonsOf, levelLabel: levelLabel, PLANS: PLANS, acts: acts, chgs: chgs,
-    stamp: stamp, gateExtra: function () { return importCard(false); }
+    stamp: stamp, settingsExtra: settingsExtra, gateExtra: function () { return importCard(false); }
   });
   route();
 })();
