@@ -1,4 +1,4 @@
-/* MM-iTalk - ứng dụng chính: màn hình, vòng học 9 bước, sao, cửa hàng, sổ tay. */
+/* MM-iTalk - ứng dụng chính: màn hình, vòng học 8–9 bước, sao, cửa hàng, sổ tay. */
 (function () {
   'use strict';
   var D = window.MMI_DATA, S = window.MMIStore, Sp = window.MMISpeech, M = window.MMIMascot;
@@ -154,9 +154,12 @@
   }
   function gc(i) { return D.ganColors[i % D.ganColors.length]; }
   function stepper() {
-    return '<div class="stepper" aria-label="Tiến độ">' + STEPS.map(function (_, i) { return '<i class="' + (i < ctx.step ? 'on' : (i === ctx.step ? 'cur' : '')) + '"></i>'; }).join('') + '</div>' +
-      '<div class="step-title"><span class="n">Bước ' + (ctx.step + 1) + '/9</span><h2 style="margin:0">' + esc(STEPS[ctx.step]) + '</h2></div>';
+    return '<div class="stepper" aria-label="Tiến độ">' + stepNames().map(function (_, i) { return '<i class="' + (i < stepNo() ? 'on' : (i === stepNo() ? 'cur' : '')) + '"></i>'; }).join('') + '</div>' +
+      '<div class="step-title"><span class="n">Bước ' + (stepNo() + 1) + '/' + stepNames().length + '</span><h2 style="margin:0">' + esc(stepNames()[stepNo()]) + '</h2></div>';
   }
+  function isTH() { var P = profile(); return !!P && P.level === 'th'; }
+  function stepNames() { return isTH() ? STEPS.filter(function (_, i) { return i !== 7; }) : STEPS; }
+  function stepNo() { return isTH() && ctx.step === 8 ? 7 : ctx.step; }
   function lessonFrame(inner) {
     render(topbar(profile(), '/') + '<h3 class="muted" style="margin-bottom:4px">' + (ctx.L.icon || D.kindIcon[ctx.L.kind]) + ' ' + esc(ctx.L.title) + '</h3>' + stepper() + inner + parentHTML(ctx.L));
   }
@@ -180,7 +183,7 @@
     lessonFrame('<div class="card"><div class="hello" style="grid-template-columns:auto 1fr">' + M.render(profile().equipped, { size: 'md' }) +
       '<div><h2>' + esc(L.title) + '</h2><p style="font-size:1.1em">' + esc(L.task) + '</p>' +
       '<div class="row"><span class="badge">Mục tiêu: ' + targetLabel(L.target) + '</span><span class="badge">' + L.ngan.length + ' ngăn ý</span><span class="badge">Gợi ý: ' + esc(D.hintNames[L.hint]) + '</span></div></div></div></div>' +
-      '<div class="card soft mt"><b>Vẹt con đang chờ!</b> Bạn ấy chưa biết gì về chủ đề này. Em hãy giải thích thật rõ cho bạn ấy hiểu nhé. Một bài học gồm 9 bước, mất khoảng 20–35 phút.</div>' +
+      '<div class="card soft mt"><b>Vẹt con đang chờ!</b> Bạn ấy chưa biết gì về chủ đề này. Em hãy giải thích thật rõ cho bạn ấy hiểu nhé. Một bài học gồm ' + stepNames().length + ' bước, mất khoảng ' + (isTH() ? '15–25' : '20–35') + ' phút.</div>' +
       '<div class="mt"><button class="btn big" data-act="step" data-n="1">Bắt đầu →</button></div>');
   }
 
@@ -213,7 +216,7 @@
   function consentCard(n) {
     return '<div class="card warn"><h3>Trước khi nói, cha mẹ và em cùng đọc nhé</h3><ul>' +
       '<li>Chrome sẽ hỏi quyền dùng <b>micro</b>. Em bấm "Cho phép".</li>' +
-      '<li>Bản ghi âm và bài viết của em <b>chỉ lưu trong máy này</b>.</li>' +
+      '<li>' + (isTH() ? 'Bản ghi âm' : 'Bản ghi âm và bài viết') + ' của em <b>chỉ lưu trong máy này</b>.</li>' +
       '<li>Để chuyển lời nói thành chữ, Chrome gửi âm thanh qua mạng tới dịch vụ nhận dạng giọng nói của Google, nên máy cần có mạng.</li></ul>' +
       '<button class="btn" data-act="consent" data-n="' + n + '">Em và cha mẹ đã hiểu</button></div>';
   }
@@ -247,7 +250,7 @@
     tick = cd;
     function begin() {
       session = Sp.createSession({
-        recordAudio: !!S.settings().recAudio,
+        recordAudio: !!S.settings().recAudio && !Sp.isMobile,
         onError: function (code) {
           var m = { 'not-allowed': 'Chrome chưa cho dùng micro. Bấm biểu tượng ổ khóa cạnh thanh địa chỉ, chọn cho phép Micro, rồi thử lại.', 'audio-capture': 'Không tìm thấy micro. Hãy cắm micro hoặc kiểm tra lại.', 'network': 'Không kết nối được dịch vụ nhận dạng giọng nói (cần có mạng). Em vẫn nói được; lát nữa gõ lại lời mình nói.' }[code];
           if (m) { var s = document.getElementById('status'); if (s) s.innerHTML = '<span style="color:#b9332d;font-weight:700">' + esc(m) + '</span>'; }
@@ -290,7 +293,7 @@
     document.getElementById('status').textContent = 'Đang xử lý lời em nói…';
     s.stop().then(function (res) {
       var dur = Math.round(res.durationMs / 1000), text = res.text;
-      ctx.att[n] = { dur: dur, text: text, segs: res.segs, audio: res.audio, words: words(text), restarts: res.restarts, typed: false, srOK: res.srSupported };
+      ctx.att[n] = { dur: dur, text: text, segs: res.segs, audio: res.audio, words: words(text), restarts: res.restarts, typed: false, srOK: res.srSupported, dropped: res.recDropped };
       showSpeakResult(n);
     });
   }
@@ -301,7 +304,7 @@
     var short = a.dur < 8 ? '<div class="card warn mt">Lần này hơi ngắn. Em có thể bấm "Nói lại" để thử lần nữa, hoặc đi tiếp cũng được.</div>' : '';
     var typed = '';
     if (!a.text) {
-      typed = '<div class="card warn mt"><b>Máy chưa nghe được chữ nào.</b> ' + (a.srOK ? 'Có thể micro nói nhỏ hoặc không có mạng. ' : '') + 'Em gõ lại vài câu em vừa nói nhé (không bắt buộc):' +
+      typed = '<div class="card warn mt"><b>Máy chưa nghe được chữ nào.</b> ' + (a.srOK ? 'Có thể micro nói nhỏ, nói quá xa micro hoặc máy không có mạng. ' : '') + (a.dropped ? 'App đã tắt ghi âm để máy nghe rõ hơn; em thử nói lại nhé. ' : '') + 'Em gõ lại vài câu em vừa nói nhé (không bắt buộc):' +
         '<textarea id="typedTx" style="min-height:120px" placeholder="Gõ lại lời em đã nói…"></textarea><button class="btn sm mt" data-act="savetyped" data-n="' + n + '">Lưu lời em gõ</button></div>';
     }
     var cmp = '';
@@ -310,7 +313,7 @@
       cmp = '<div class="card soft mt"><b>So với lần 1:</b><div class="metrics mt"><div class="metric"><b>' + (dd >= 0 ? '+' : '') + dd + 's</b>thời gian</div><div class="metric"><b>' + (a.words - b.words >= 0 ? '+' : '') + (a.words - b.words) + '</b>từ</div><div class="metric"><b>' + c1 + '→' + c2 + '</b>ngăn nghe thấy</div></div></div>';
     }
     el.innerHTML = '<div class="card mt"><div class="metrics"><div class="metric"><b>' + mmss(a.dur) + '</b>thời gian</div><div class="metric"><b>' + a.words + '</b>số từ</div><div class="metric"><b>' + (a.dur >= 10 && pace ? pace : '–') + '</b>từ mỗi phút</div></div></div>' + short + typed + cmp +
-      '<div class="row mt"><button class="btn alt" data-act="retry" data-n="' + n + '">🔁 Nói lại</button><button class="btn big" data-act="step" data-n="' + (n === 0 ? 4 : 7) + '">Tiếp tục →</button></div>';
+      '<div class="row mt"><button class="btn alt" data-act="retry" data-n="' + n + '">🔁 Nói lại</button><button class="btn big" data-act="step" data-n="' + (n === 0 ? 4 : (isTH() ? 8 : 7)) + '">Tiếp tục →</button></div>';
     var cl = document.getElementById('clock'); if (cl) cl.textContent = mmss(a.dur);
   }
 
@@ -328,7 +331,7 @@
     if (a.audio) { url = URL.createObjectURL(a.audio); urls.push(url); }
     var pace = a.dur > 0 ? Math.round(a.words * 60 / a.dur) : 0;
     lessonFrame('<p>Bây giờ em là "người nghe". Nghe lại lời mình nói và tìm xem chỗ nào còn thiếu, chỗ nào Vẹt con khó hiểu.</p>' +
-      (url ? '<div class="card soft mb"><b>🔊 Nghe lại lời em nói</b><br><audio controls src="' + url + '" style="width:100%;margin-top:6px"></audio></div>' : '') +
+      (url ? '<div class="card soft mb"><b>🔊 Nghe lại lời em nói</b><br><audio controls src="' + url + '" style="width:100%;margin-top:6px"></audio></div>' : (Sp.isMobile ? '<div class="card soft mb">Trên điện thoại, app chưa lưu ghi âm để máy đếm được chữ. Em đọc phần chữ máy nghe được ở dưới nhé.</div>' : '')) +
       '<div class="card soft mb"><b>📝 Máy nghe được:</b><div class="tx mt">' + (a.text ? transcriptHTML(a) : '<span class="muted">Chưa có chữ. Không sao, em vẫn tự soi lại được bằng trí nhớ.</span>') + '</div>' +
       '<p class="muted small mt">Máy chưa viết dấu chấm, dấu phẩy. Những chỗ gạch chấm đỏ là chỗ máy nghe chưa chắc, em nghe lại để tự quyết định nhé. Máy cũng có thể nghe sai, nhất là với giọng vùng miền.</p></div>' +
       '<div class="metrics mb"><div class="metric"><b>' + mmss(a.dur) + '</b>thời gian</div><div class="metric"><b>' + a.words + '</b>số từ</div><div class="metric"><b>' + (a.dur >= 10 && pace ? pace : '–') + '</b>từ mỗi phút</div></div>' +
@@ -420,13 +423,13 @@
       var prev = P.progress[L.id], repeat = prev && prev.done, a0 = ctx.att[0], a1 = ctx.att[1], total = 0;
       if (repeat) { R.push(['Luyện lại bài cũ', 2]); total = 2; }
       else {
-        R.push(['Hoàn thành 9 bước', 3]);
+        R.push(['Hoàn thành ' + stepNames().length + ' bước', 3]);
         var c0 = a0 ? coverage(a0.text).filter(function (x) { return x >= 2; }).length : 0, c1 = a1 ? coverage(a1.text).filter(function (x) { return x >= 2; }).length : 0;
         if (a1 && a0 && (a1.dur > a0.dur || c1 > c0)) R.push(['Nói lần 2 dài hơn hoặc đủ ngăn hơn', 2]);
         if (ctx.readDone) R.push(['Đọc to bài mẫu', 1]);
         var alltext = Sp.norm(((a1 && a1.text) || '') + ' ' + ctx.writing), used = L.sample.vocab.filter(function (v) { return alltext.indexOf(Sp.norm(v.w)) >= 0; }).length;
         if (used) R.push(['Dùng từ mới (' + Math.min(used, 3) + ' từ)', Math.min(used, 3)]);
-        if (words(ctx.writing) >= 10) R.push(['Hoàn thành bài viết', 1]);
+        if (!isTH() && words(ctx.writing) >= 10) R.push(['Hoàn thành bài viết', 1]);
         if (!ctx.helped) R.push(['Tự lực (không mở thêm gợi ý)', 1]);
         total = R.reduce(function (s, r) { return s + r[1]; }, 0);
       }
@@ -501,7 +504,7 @@
     var P = profile(), st = S.settings();
     render(topbar(P, '/') + '<h1>⚙️ Cài đặt</h1>' +
       '<div class="card mb"><h3>Hồ sơ: ' + esc(P.name) + ' · ' + esc(levelLabel(P)) + '</h3><div class="row"><button class="btn alt sm" data-act="nav" data-to="/profiles">Đổi bạn / thêm hồ sơ</button><button class="btn red sm" data-act="delprofile">Xóa hồ sơ này</button></div></div>' +
-      '<div class="card mb"><h3>Tùy chọn</h3><label class="chk"><input type="checkbox" data-chg="setrec" ' + (st.recAudio ? 'checked' : '') + '><span>Ghi âm để nghe lại (lưu trong máy)</span></label><label class="chk"><input type="checkbox" data-chg="settts" ' + (st.tts ? 'checked' : '') + '><span>Bật giọng đọc mẫu (nếu máy có giọng tiếng Việt)</span></label></div>' +
+      '<div class="card mb"><h3>Tùy chọn</h3>' + (Sp.isMobile ? '<p class="muted small">Trên điện thoại, MM-iTalk tắt ghi âm để máy chuyển được lời nói thành chữ (hai việc này tranh nhau micro). Trên máy tính, em vẫn nghe lại được.</p>' : '<label class="chk"><input type="checkbox" data-chg="setrec" ' + (st.recAudio ? 'checked' : '') + '><span>Ghi âm để nghe lại (lưu trong máy)</span></label>') + '<label class="chk"><input type="checkbox" data-chg="settts" ' + (st.tts ? 'checked' : '') + '><span>Bật giọng đọc mẫu (nếu máy có giọng tiếng Việt)</span></label></div>' +
       '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này. Nếu xóa dữ liệu trình duyệt, mọi thứ sẽ mất. Hãy sao lưu thỉnh thoảng (không gồm file ghi âm).</p><div class="row"><button class="btn sm" data-act="backup">⬇️ Sao lưu ra file</button><label class="btn alt sm">⬆️ Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
       '<div class="card mb"><h3>Kiểm tra micro</h3><p class="muted">Thử ghi âm và nhận dạng giọng nói trước khi học.</p><a class="btn alt sm" href="test-mic.html">🎤 Mở trang thử micro</a></div>' +
       (deferredInstall ? '<div class="card mb"><h3>Cài ứng dụng</h3><button class="btn sm" data-act="install">📲 Cài MM-iTalk lên máy</button></div>' : '<div class="card mb"><h3>Cài ứng dụng</h3><p class="muted">Trên Chrome, bấm biểu tượng cài đặt ở thanh địa chỉ hoặc menu ⋮ → "Cài đặt MM-iTalk" (trên Android: "Thêm vào màn hình chính").</p></div>') +

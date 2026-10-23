@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
 
   function norm(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
@@ -18,7 +19,17 @@
     opts = opts || {};
     var rec = null, active = false, segs = [], interim = '', restarts = 0, startedAt = 0;
     var stream = null, mr = null, chunks = [], audioOK = false, srOK = false, errors = [];
-    var stopResolve = null, lastErr = null, gotAny = false;
+    var stopResolve = null, lastErr = null, gotAny = false, dropped = false, watchdog = null;
+
+    /* Ghi âm và nhận dạng giọng nói có thể tranh nhau micro (hay gặp trên điện thoại).
+       Nếu vậy, bỏ ghi âm để việc chuyển lời nói thành chữ vẫn chạy. */
+    function dropRecorder() {
+      if (dropped || !mr) return;
+      dropped = true; audioOK = false; chunks = [];
+      try { mr.ondataavailable = null; if (mr.state !== 'inactive') mr.stop(); } catch (e) {}
+      if (stream) { try { stream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} stream = null; }
+      if (rec && active) { try { rec.abort(); } catch (e) {} }
+    }
 
     function emit() {
       if (opts.onUpdate) opts.onUpdate({
@@ -47,6 +58,7 @@
         rec.onerror = function (e) {
           var c = e.error;
           if (c === 'no-speech' || c === 'aborted') return;
+          if (c === 'audio-capture' && mr && !dropped) { dropRecorder(); return; }
           if (c === 'not-allowed' || c === 'service-not-allowed') { active = false; }
           err(c);
         };
@@ -76,7 +88,7 @@
     }
 
     function finish() {
-      var done = stopResolve; stopResolve = null;
+      var done = stopResolve; stopResolve = null; clearTimeout(watchdog);
       var finalize = function (blob) {
         if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
         if (interim && !segs.length) { segs.push({ t: interim.trim(), c: 0.5, ts: Date.now() - startedAt }); }
@@ -84,7 +96,7 @@
         done({
           text: segs.map(function (s) { return s.t; }).join(' '), segs: segs,
           durationMs: Date.now() - startedAt, audio: blob || null, restarts: restarts,
-          srSupported: srOK, audioOK: audioOK, errors: errors, gotSpeech: gotAny
+          srSupported: srOK, audioOK: audioOK, recDropped: dropped, errors: errors, gotSpeech: gotAny
         });
       };
       if (mr && mr.state !== 'inactive') {
@@ -96,12 +108,13 @@
     return {
       supported: !!SR,
       start: function () {
-        segs = []; interim = ''; restarts = 0; errors = []; chunks = []; gotAny = false;
+        segs = []; interim = ''; restarts = 0; errors = []; chunks = []; gotAny = false; dropped = false;
         startedAt = Date.now(); active = true;
         return setupAudio().then(function () {
           if (!active) return;
           if (setupRecognition()) { try { rec.start(); } catch (e) { err('sr-start'); } }
           startedAt = Date.now();
+          if (mr) { clearTimeout(watchdog); watchdog = setTimeout(function () { if (active && !gotAny) dropRecorder(); }, 8000); }
         });
       },
       stop: function () {
@@ -156,7 +169,7 @@
   }
 
   window.MMISpeech = {
-    supported: !!SR, norm: norm, tokens: tokens, countWords: countWords,
+    supported: !!SR, isMobile: IS_MOBILE, norm: norm, tokens: tokens, countWords: countWords,
     createSession: createSession, compare: compare, speak: speak,
     hasVoice: function () { return !!voice(); }
   };

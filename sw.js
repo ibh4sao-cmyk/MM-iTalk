@@ -1,5 +1,5 @@
 /* MM-iTalk service worker: lưu app vào máy để chạy offline sau lần mở đầu tiên. */
-var CACHE = 'mm-italk-v0.1.0';
+var CACHE = 'mm-italk-v0.1.1';
 var FILES = [
   './', './index.html', './manifest.webmanifest', './test-mic.html',
   './css/app.css',

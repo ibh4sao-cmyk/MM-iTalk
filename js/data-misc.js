@@ -93,7 +93,7 @@ window.MMI_DATA = {
       { icon: '🪜', title: 'Đọc gợi ý', text: 'Gợi ý giống như cái thang giúp em leo lên. Ở các bài đầu, thang có rất nhiều nấc. Các bài sau thang ít nấc dần, vì em đã khỏe hơn.' },
       { icon: '🦜', title: 'Nói cho Vẹt con nghe', text: 'Vẹt con chưa biết gì cả! Em hãy giải thích thật rõ để bạn ấy hiểu. Bấm nút thu âm và nói to, rõ.' },
       { icon: '🔍', title: 'Nghe lại và xem bài mẫu', text: 'Nghe lại lời em nói, xem chỗ nào em còn vấp. Sau đó đọc bài mẫu để học thêm từ hay và cách nói.' },
-      { icon: '✍️', title: 'Nói lại, rồi viết', text: 'Em nói lần hai thật hay hơn. Sau đó sửa lời nói thành một bài viết có dấu chấm, dấu phẩy. Xong bài là nhận sao!' }
+      { icon: '🌟', title: 'Nói lại lần hai', text: 'Em nói lần hai thật hay hơn lần một, dùng thêm ý và từ mới em vừa học. Xong bài là nhận sao!' }
     ],
     thcs: [
       { icon: '🔭', title: 'Quan sát có chủ đích', text: 'Chọn một sự vật, sự việc hoặc hiện tượng quanh em. Quan sát bằng nhiều giác quan và ghi nhớ những chi tiết đáng chú ý.' },
