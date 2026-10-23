@@ -2,7 +2,7 @@
 
 App luyện nói liên tục 3–5 phút cho học sinh Tiểu học (lớp 2–5) và THCS (lớp 6–9). Chạy trên Chrome (máy tính, Android), cài được lên máy như một ứng dụng. Không cần máy chủ, không có tài khoản; dữ liệu nằm trong trình duyệt của từng máy.
 
-**Phiên bản 0.1.2 (bản chạy thử):** Chặng 1, mỗi cấp 3 bài, vòng học 8 bước (không có bước gõ chữ, chỉ nói), sao, cửa hàng, Sổ từ, Nhật ký, Góc cha mẹ.
+**Phiên bản 0.2.0:** đủ 4 chặng, mỗi cấp 36 bài (4 chặng × 8 bài + 1 Thử thách), vòng học 8 bước (không gõ chữ, chỉ nói), mở khóa chặng bằng Thử thách (+5 sao và huy hiệu), Nói tự do, sao, cửa hàng, Sổ từ, Nhật ký, Góc cha mẹ. **Ưu tiên máy tính (Chrome)**; điện thoại tạm thời chỉ để xem nội dung.
 
 ## Đưa lên GitHub Pages (kho riêng tên MM-iTalk)
 
@@ -20,12 +20,12 @@ Lưu ý: không mở `index.html` bằng cách bấm đúp (địa chỉ `file:/
 
 ## Cập nhật app
 
-Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.1.2';`) để máy đã cài tải bản mới.
+Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.2.0';`) để máy đã cài tải bản mới.
 
 ## Cấu trúc
 
 - `index.html`, `css/app.css`, `js/app.js`: giao diện và vòng học.
-- `js/data-lessons-th.js`, `js/data-lessons-thcs.js`: bài học (thêm bài mới ở đây).
+- `js/data-frames.js`: khung các ngăn ý và hàm `MMI_ADD` dựng bài học; `js/data-lessons-*.js`, `js/data-th-c1..c4.js`, `js/data-thcs-c1..c4.js`: nội dung bài (36 bài mỗi cấp, thêm bài mới bằng `MMI_ADD`).
 - `js/data-misc.js`: chặng, lời động viên, cửa hàng, Góc cha mẹ.
 - `js/speech.js`: ghi âm, nhận dạng giọng nói, so sánh đọc to.
 - `js/store.js`: lưu dữ liệu trong máy (localStorage và IndexedDB, khóa bắt đầu bằng `mmit`, không lẫn với app khác cùng tài khoản GitHub).
