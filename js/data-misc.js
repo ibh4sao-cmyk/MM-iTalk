@@ -1,6 +1,6 @@
 /* MM-iTalk - Dữ liệu phụ: chặng, lời động viên, cửa hàng, hướng dẫn, góc cha mẹ */
 window.MMI_DATA = {
-  version: '0.3.0',
+  version: '0.4.0',
   chang: {
     th: [
       { n: 1, name: 'Khởi động', weeks: '1–3', time: '30–60 giây', ngan: 3, hint: 'Gợi ý đầy đủ rồi bớt dần', total: 9 },
