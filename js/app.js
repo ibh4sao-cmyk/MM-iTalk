@@ -27,6 +27,18 @@
     var ch = lessonsOf(P.level, n - 1).filter(function (l) { return l.challenge; })[0];
     return !!(ch && P.progress[ch.id] && P.progress[ch.id].done);
   }
+  function allVocab(L) { return L.sample.vocab.concat((L.sample.alt && L.sample.alt.vocab) || []); }
+  function sampleVariants(L) {
+    var v = [{ id: 'base', label: 'Cách cơ bản', paras: L.sample.paras }];
+    if (L.sample.alt) v.push({ id: 'alt', label: '✨ Góc nhìn mới', angle: L.sample.alt.angle, paras: L.sample.alt.paras, why: L.sample.alt.why, vocab: L.sample.alt.vocab });
+    ((S.get().customSamples || {})[L.id] || []).forEach(function (c) { v.push({ id: 'c' + c.id, label: '👪 ' + c.title, paras: c.paras, custom: true }); });
+    return v;
+  }
+  function curVariant() {
+    var vs = sampleVariants(ctx.L);
+    for (var i = 0; i < vs.length; i++) if (vs[i].id === ctx.sampleTab) return vs[i];
+    return vs[0];
+  }
   function findLesson(id) { for (var i = 0; i < LESSONS.length; i++) if (LESSONS[i].id === id) return LESSONS[i]; return null; }
   function stopAll() {
     clearInterval(tick); tick = null; clearInterval(prepTick); prepTick = null;
@@ -164,7 +176,7 @@
     var L = findLesson(id), P = profile(); if (!L || L.level !== P.level) return nav('/');
     if (!changUnlocked(P, L.chang)) { toast('Chặng này đang khóa. Em hoàn thành Thử thách của chặng trước để mở nhé!'); return nav('/'); }
     ctx = { L: L, step: 0, level: L.hint, helped: false, att: [null, null], reflect: { silence: '', plan: {} }, check: null, readDone: false, vocab: {}, prepped: {}, finished: false };
-    L.sample.vocab.forEach(function (v) { ctx.vocab[v.w] = true; });
+    allVocab(L).forEach(function (v) { ctx.vocab[v.w] = true; });
     renderStep();
   }
   function gc(i) { return D.ganColors[i % D.ganColors.length]; }
@@ -244,7 +256,7 @@
     var warn = '';
     if (!Sp.supported) warn += '<div class="card warn mb"><b>Trình duyệt này chưa chuyển được giọng nói thành chữ.</b> Em vẫn nói và ghi âm được, app vẫn tính thời gian em nói. Để dùng đầy đủ, hãy mở bằng Chrome trên máy tính.</div>';
     if (S.memoryOnly()) warn += '<div class="card warn mb">Trình duyệt đang chặn lưu dữ liệu, nên bài làm sẽ mất khi đóng trang.</div>';
-    var tips = n === 1 ? '<div class="card soft mb"><b>Nói lại lần hai:</b> ' + esc(L.sample.tip) + '<div class="kws">' + L.sample.vocab.map(function (v) { return '<span class="kw">' + esc(v.w) + '</span>'; }).join('') + '</div></div>' : '';
+    var tips = n === 1 ? '<div class="card soft mb"><b>Nói lại lần hai:</b> ' + esc(L.sample.tip) + '<div class="kws">' + allVocab(L).map(function (v) { return '<span class="kw">' + esc(v.w) + '</span>'; }).join('') + '</div></div>' : '';
     lessonFrame(warn + tips +
       '<div class="card center"><div class="row" style="justify-content:center">' + M.render(P.equipped, { size: 'md', talk: false }) + '</div>' +
       '<div class="timer"><div class="ring">' + ringSVG(0, false) + '<div class="t" id="clock">0:00</div><div class="sub" id="clockSub">Mục tiêu ' + mmss(L.target.min) + '–' + mmss(L.target.max) + '</div></div></div>' +
@@ -360,14 +372,21 @@
 
   /* ----- Bài mẫu ----- */
   function stepSample() {
-    var L = ctx.L, sm = L.sample, tts = S.settings().tts && Sp.hasVoice();
-    lessonFrame('<p>Đây là một bài mẫu. Mỗi đoạn là một ngăn ý, tô màu giống ở phần gợi ý. Em đọc để học cách nói, từ hay và kiến thức mới. <b>Không cần giống y hệt</b>, bài của em cũng rất đáng quý.</p>' +
-      sm.paras.map(function (p, i) {
-        return '<div class="sample" style="--c:' + gc(i) + '"><div class="lab">Ngăn ' + (i + 1) + ': ' + esc(L.ngan[i] ? L.ngan[i].name : '') + '</div><p>' + esc(p) + '</p>' +
+    var L = ctx.L, sm = L.sample, tts = S.settings().tts && Sp.hasVoice(), vs = sampleVariants(L), cv = curVariant();
+    var tabs = vs.length > 1 ? '<div class="tabs mb">' + vs.map(function (v) { return '<button class="chip ' + (v.id === cv.id ? 'sel' : '') + '" data-act="stab" data-id="' + esc(v.id) + '">' + esc(v.label) + '</button>'; }).join('') + '</div>' : '';
+    var intro = cv.id === 'alt' ?
+      '<div class="card warn mb">✨ <b>Góc nhìn mới: ' + esc(cv.angle) + '.</b> Vẫn đủ các ngăn ý như bài cơ bản, nhưng nhìn sự vật theo một cách khác. Em đọc rồi thử đặt mình vào góc nhìn đó nhé!</div>' :
+      (cv.custom ? '<div class="card soft mb">👪 Ví dụ do cha mẹ thêm cho bài này.</div>' :
+        '<p>Đây là một bài mẫu. Mỗi đoạn là một ngăn ý, tô màu giống ở phần gợi ý. Em đọc để học cách nói, từ hay và kiến thức mới. <b>Không cần giống y hệt</b>, bài của em cũng rất đáng quý.</p>');
+    var vocab = sm.vocab.concat(cv.id === 'alt' ? (cv.vocab || []) : []);
+    lessonFrame(tabs + intro +
+      cv.paras.map(function (p, i) {
+        return '<div class="sample" style="--c:' + gc(i) + '"><div class="lab">' + (L.ngan[i] ? 'Ngăn ' + (i + 1) + ': ' + esc(L.ngan[i].name) : 'Đoạn ' + (i + 1)) + '</div><p>' + esc(p) + '</p>' +
           '<div class="row">' + (tts ? '<button class="btn alt sm" data-act="tts" data-i="' + i + '">🔊 Nghe đọc</button>' : '') +
           (Sp.supported ? '<button class="btn alt sm" data-act="readstart" data-i="' + i + '">🎤 Đọc to đoạn này</button>' : '') + '</div><div id="read-' + i + '"></div></div>';
       }).join('') +
-      '<h3 class="mt">Từ hay cần nhớ</h3><div class="col">' + sm.vocab.map(function (v) {
+      (cv.id === 'alt' && cv.why ? '<div class="card ok mb">💡 <b>Vì sao cách này hay?</b> ' + esc(cv.why) + '</div>' : '') +
+      '<h3 class="mt">Từ hay cần nhớ</h3><div class="col">' + vocab.map(function (v) {
         return '<label class="vcard"><input type="checkbox" data-chg="vocab" data-w="' + esc(v.w) + '" ' + (ctx.vocab[v.w] ? 'checked' : '') + '> <b>' + esc(v.w) + '</b>: ' + esc(v.m) + '<br><span class="muted">Ví dụ: ' + esc(v.ex) + '</span></label>';
       }).join('') + '</div><p class="muted small">Từ được tick sẽ được thêm vào Sổ từ khi em xong bài.</p>' +
       '<h3 class="mt">Em biết thêm</h3><div class="card soft"><ul style="margin:0;padding-left:20px">' + sm.more.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>' +
@@ -389,7 +408,7 @@
     var sess = reader.session, box = document.getElementById('read-' + i);
     box.innerHTML = '<p class="muted">Đang xử lý…</p>';
     sess.stop().then(function (res) {
-      var cmp = Sp.compare(ctx.L.sample.paras[i], res.text);
+      var cmp = Sp.compare(curVariant().paras[i], res.text);
       if (!res.text) { box.innerHTML = '<div class="card warn mt">Máy chưa nghe được gì. Em thử lại, đọc to hơn một chút nhé.</div>'; return; }
       ctx.readDone = true;
       var tts = S.settings().tts && Sp.hasVoice();
@@ -413,7 +432,7 @@
         var c0 = a0 ? coverage(a0.text).filter(function (x) { return x >= 2; }).length : 0, c1 = a1 ? coverage(a1.text).filter(function (x) { return x >= 2; }).length : 0;
         if (a1 && a0 && (a1.dur > a0.dur || c1 > c0)) R.push(['Nói lần 2 dài hơn hoặc đủ ngăn hơn', 2]);
         if (ctx.readDone) R.push(['Đọc to bài mẫu', 1]);
-        var alltext = Sp.norm((a1 && a1.text) || ''), used = L.sample.vocab.filter(function (v) { return alltext.indexOf(Sp.norm(v.w)) >= 0; }).length;
+        var alltext = Sp.norm((a1 && a1.text) || ''), used = allVocab(L).filter(function (v) { return alltext.indexOf(Sp.norm(v.w)) >= 0; }).length;
         if (used) R.push(['Dùng từ mới (' + Math.min(used, 3) + ' từ)', Math.min(used, 3)]);
         if (!ctx.helped) R.push(['Tự lực (không mở thêm gợi ý)', 1]);
         if (L.challenge) {
@@ -441,7 +460,7 @@
       P.progress[L.id] = { done: true, doneAt: ts, helped: ctx.helped, hint: ctx.level, stars: (repeat && prev ? (prev.stars || 0) : 0) + total, attempts: atts, reflect: ctx.reflect, check: ctx.check, R: ctx.R, history: hist };
       P.stars += total; P.lastDone = ts;
       var added = [];
-      L.sample.vocab.forEach(function (v) {
+      allVocab(L).forEach(function (v) {
         if (ctx.vocab[v.w] && !P.vocab.some(function (x) { return x.w === v.w; })) { P.vocab.push({ w: v.w, m: v.m, ex: v.ex, lesson: L.id, title: L.title, added: ts }); added.push(v.w); }
       });
       ctx.added = added; P.progress[L.id].added = added; S.save();
@@ -577,7 +596,8 @@
     speakstart: function (el) { startSpeaking(parseInt(el.getAttribute('data-n'), 10)); },
     speakstop: function (el) { stopSpeaking(parseInt(el.getAttribute('data-n'), 10)); },
     retry: function (el) { ctx.att[parseInt(el.getAttribute('data-n'), 10)] = null; stepSpeak(parseInt(el.getAttribute('data-n'), 10)); },
-    tts: function (el) { Sp.speak(ctx.L.sample.paras[parseInt(el.getAttribute('data-i'), 10)]); },
+    tts: function (el) { Sp.speak(curVariant().paras[parseInt(el.getAttribute('data-i'), 10)]); },
+    stab: function (el) { ctx.sampleTab = el.getAttribute('data-id'); stepSample(); },
     ttsword: function (el) { Sp.speak(el.getAttribute('data-w')); },
     readstart: function (el) { readStart(parseInt(el.getAttribute('data-i'), 10)); },
     readstop: function (el) { readStop(parseInt(el.getAttribute('data-i'), 10)); },

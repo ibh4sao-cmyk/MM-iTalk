@@ -145,4 +145,24 @@
     if (L.sample.paras.length !== L.ngan.length) { try { console.error('MMI_ADD: số đoạn bài mẫu khác số ngăn ở ' + L.id); } catch (e) {} }
     window.MMI_LESSONS.push(L);
   };
+
+  /* Ghi đè/bổ sung bài mẫu của một bài đã có:
+     MMI_SAMPLE(id, { paras, vocab?, more?, tip?, alt: { angle, paras, why, vocab? } })
+     - paras: bài mẫu "cách cơ bản" (mỗi ngăn một đoạn)
+     - alt: ví dụ "góc nhìn mới" (cũng mỗi ngăn một đoạn), why = vì sao cách này hay */
+  function mapVocab(a) { return (a || []).map(function (v) { return { w: v[0], m: v[1], ex: v[2] }; }); }
+  window.MMI_SAMPLE = function (id, o) {
+    var L = null, i;
+    for (i = 0; i < window.MMI_LESSONS.length; i++) if (window.MMI_LESSONS[i].id === id) { L = window.MMI_LESSONS[i]; break; }
+    if (!L) { try { console.error('MMI_SAMPLE: không có bài ' + id); } catch (e) {} return; }
+    if (o.paras) L.sample.paras = o.paras;
+    if (o.vocab) L.sample.vocab = mapVocab(o.vocab);
+    if (o.more) L.sample.more = o.more;
+    if (o.tip) L.sample.tip = o.tip;
+    if (o.pron) L.pron = o.pron;
+    if (o.alt) L.sample.alt = { angle: o.alt.angle, paras: o.alt.paras, why: o.alt.why, vocab: mapVocab(o.alt.vocab) };
+    var n = L.ngan.length;
+    if (L.sample.paras.length !== n) { try { console.error('MMI_SAMPLE: số đoạn cơ bản khác số ngăn ở ' + id); } catch (e) {} }
+    if (L.sample.alt && L.sample.alt.paras.length !== n) { try { console.error('MMI_SAMPLE: số đoạn góc nhìn mới khác số ngăn ở ' + id); } catch (e) {} }
+  };
 })();

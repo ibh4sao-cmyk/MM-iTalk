@@ -81,7 +81,7 @@
   function allFree(P) { return (P.freeLog || []).slice(); }
 
   /* ---------- khung chung ---------- */
-  var TABS = [['overview', 'Tổng quan'], ['lessons', 'Từng bài'], ['progress', 'Tiến bộ'], ['ai', 'Nhận xét AI'], ['settings', 'Cài đặt cha mẹ']];
+  var TABS = [['overview', 'Tổng quan'], ['lessons', 'Từng bài'], ['progress', 'Tiến bộ'], ['samples', 'Ví dụ của cha mẹ'], ['ai', 'Nhận xét AI'], ['settings', 'Cài đặt cha mẹ']];
   function frame(tab, inner) {
     var P = sel(), ps = S.profiles();
     var chooser = ps.length > 1 ? '<label class="chip">Con: <select data-chg="psel" style="border:0;background:transparent;font:inherit;font-weight:700">' + ps.map(function (p) { return '<option value="' + esc(p.id) + '" ' + (P && p.id === P.id ? 'selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></label>' : (P ? '<span class="chip">Con: ' + esc(P.name) + '</span>' : '');
@@ -276,6 +276,30 @@
       '<div class="card mb"><h3>Tóm tắt theo chặng</h3>' + (rows ? '<div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Chặng</th><th>Số buổi</th><th>Thời lượng / mục tiêu</th><th>Từ mỗi phút</th><th>Ngăn đủ (TB)</th><th>Lần 2 tốt hơn lần 1</th><th>Tự lực</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">Chưa có dữ liệu.</p>') + '<p class="muted small mt">Số từ và ngăn ý do máy nhận dạng giọng nói ước lượng (giọng vùng miền và trẻ nhỏ có thể bị nghe sai), nên hãy xem như tham khảo và nghe lại ghi âm khi cần.</p></div>');
   }
 
+  /* ---------- Ví dụ của cha mẹ ---------- */
+  var spLevel = null, spLesson = null, spEdit = null;
+  function splitParas(text) { return String(text || '').split(/\n\s*\n/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 12).map(function (x) { return x.slice(0, 4000); }); }
+  function viewSamples() {
+    var P = sel(), level = spLevel || (P ? P.level : 'th'), ls = A.lessonsOf(level);
+    if (!spLesson || !ls.some(function (l) { return l.id === spLesson; })) spLesson = ls[0] && ls[0].id;
+    var L = A.findLesson(spLesson), list = ((S.get().customSamples || {})[spLesson] || []), ed = spEdit ? list.filter(function (c) { return c.id === spEdit; })[0] : null;
+    var opts = ls.map(function (l) { return '<option value="' + esc(l.id) + '" ' + (l.id === spLesson ? 'selected' : '') + '>Chặng ' + l.chang + ' · ' + (l.challenge ? 'Thử thách' : 'bài ' + l.order) + ' · ' + esc(l.title) + '</option>'; }).join('');
+    var cards = list.map(function (c) {
+      return '<div class="card soft mb"><div class="row between"><b>' + esc(c.title) + '</b><span class="muted small">' + c.paras.length + ' đoạn · ' + dt(c.created) + '</span></div><p class="muted">' + esc(c.paras[0].slice(0, 140)) + (c.paras[0].length > 140 ? '…' : '') + '</p>' +
+        '<div class="row"><button class="btn alt sm" data-act="psamedit" data-id="' + esc(c.id) + '">✏️ Sửa</button><button class="btn red sm" data-act="psamdel" data-id="' + esc(c.id) + '">🗑️ Xóa</button></div></div>';
+    }).join('');
+    frame('samples', '<div class="card mb"><h2>Ví dụ của cha mẹ</h2><p class="muted">Thêm bài mẫu của riêng gia đình cho từng bài. Ví dụ hiện ở bước "Bài mẫu" của <b>tất cả các bạn cùng cấp</b> trên máy này (tab "👪 …"), con đọc và nghe đọc được như các ví dụ khác. Con không thấy hay sửa được phần này.</p>' +
+      '<div class="row"><label class="chip">Cấp: <select data-chg="splevel" style="border:0;background:transparent;font:inherit;font-weight:700"><option value="th" ' + (level === 'th' ? 'selected' : '') + '>Tiểu học</option><option value="thcs" ' + (level === 'thcs' ? 'selected' : '') + '>THCS</option></select></label>' +
+      '<label class="chip">Bài: <select data-chg="splesson" style="border:0;background:transparent;font:inherit;font-weight:700;max-width:60vw">' + opts + '</select></label></div></div>' +
+      (L ? '<div class="card mb"><h3>' + (ed ? 'Sửa ví dụ' : 'Thêm ví dụ mới') + ' cho "' + esc(L.title) + '"</h3>' +
+        '<p class="muted small">Các ngăn ý của bài này: ' + L.ngan.map(function (g, i) { return (i + 1) + '. ' + esc(g.name); }).join(' · ') + '</p>' +
+        '<p class="muted small">Viết hoặc dán bài mẫu, <b>mỗi đoạn cách nhau một dòng trống</b>, đoạn thứ nhất ứng với ngăn 1, v.v. Ít hoặc nhiều đoạn hơn số ngăn đều được.</p>' +
+        '<div class="col"><input id="spTitle" maxlength="40" placeholder="Tên ngắn, ví dụ: Chuyện cái cặp của ba" value="' + esc(ed ? ed.title : '') + '" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px">' +
+        '<textarea id="spText" rows="14" placeholder="Đoạn 1…\n\nĐoạn 2…" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px;line-height:1.5">' + esc(ed ? ed.paras.join('\n\n') : '') + '</textarea>' +
+        '<div class="row"><button class="btn" data-act="psamsave">' + (ed ? 'Lưu thay đổi' : 'Thêm ví dụ') + '</button>' + (ed ? '<button class="btn alt" data-act="psamcancel">Hủy sửa</button>' : '') + '</div></div></div>' : '') +
+      (list.length ? '<h3>Các ví dụ đã thêm cho bài này</h3>' + cards : '<p class="muted">Bài này chưa có ví dụ nào của cha mẹ.</p>'));
+  }
+
   /* ---------- AI (chờ) ---------- */
   function viewAI() {
     frame('ai', '<div class="card"><h2>🤖 Nhận xét bằng AI <span class="badge y">Chức năng chờ</span></h2>' +
@@ -303,6 +327,7 @@
       case 'lessons': return viewLessons();
       case 'lesson': return viewLesson(parts[2]);
       case 'progress': return viewProgress();
+      case 'samples': return viewSamples();
       case 'ai': return viewAI();
       case 'settings': return viewSettingsP();
       default: return viewOverview();
@@ -352,6 +377,27 @@
       var P = sel(); if (P && confirm('Xóa hồ sơ "' + P.name + '" cùng toàn bộ bài làm và ghi âm? Việc này không thể hoàn lại.')) { S.removeProfile(P.id); pSel = null; A.nav(S.profiles().length ? '/parent/settings' : '/profiles'); }
     };
     chgs.psel = function (el) { pSel = el.value; A.nav('/parent/' + (location.hash.split('/')[2] === 'lesson' ? 'lessons' : (location.hash.split('/')[2] || 'overview'))); };
+    chgs.splevel = function (el) { spLevel = el.value; spLesson = null; spEdit = null; viewSamples(); };
+    chgs.splesson = function (el) { spLesson = el.value; spEdit = null; viewSamples(); };
+    acts.psamsave = function () {
+      if (!live()) return viewGate();
+      var title = val('spTitle').trim() || 'Ví dụ của cha mẹ', paras = splitParas(val('spText'));
+      if (!paras.length) return A.toast('Hãy viết ít nhất một đoạn.');
+      var st = S.get(); st.customSamples = st.customSamples || {};
+      var arr = st.customSamples[spLesson] = st.customSamples[spLesson] || [];
+      if (spEdit) { arr.forEach(function (c) { if (c.id === spEdit) { c.title = title; c.paras = paras; } }); }
+      else arr.push({ id: S.uid(), title: title, paras: paras, created: Date.now() });
+      spEdit = null; S.save(); A.toast('Đã lưu ví dụ.'); viewSamples();
+    };
+    acts.psamedit = function (el) { if (!live()) return viewGate(); spEdit = el.getAttribute('data-id'); viewSamples(); window.scrollTo(0, 0); };
+    acts.psamcancel = function () { spEdit = null; viewSamples(); };
+    acts.psamdel = function (el) {
+      if (!live()) return viewGate();
+      if (!confirm('Xóa ví dụ này?')) return;
+      var st = S.get(), id = el.getAttribute('data-id'); st.customSamples[spLesson] = (st.customSamples[spLesson] || []).filter(function (c) { return c.id !== id; });
+      if (!st.customSamples[spLesson].length) delete st.customSamples[spLesson];
+      spEdit = null; S.save(); viewSamples();
+    };
     chgs.punlockall = function (el) { if (!live()) return viewGate(); var P = sel(); P.unlockAll = el.checked; S.save(); A.toast(el.checked ? 'Đã mở tất cả các chặng.' : 'Đã khóa lại theo tiến độ.'); };
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' || !e.target || !e.target.id) return;
