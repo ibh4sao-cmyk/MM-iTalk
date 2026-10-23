@@ -1,5 +1,5 @@
 /* MM-iTalk Phụ huynh service worker: chạy offline sau lần mở đầu tiên. */
-var CACHE = 'mm-italk-pp-v0.6.0';
+var CACHE = 'mm-italk-pp-v0.6.1';
 var FILES = [
   './', './index.html', './viewer.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',

@@ -1,10 +1,10 @@
 {
-  "id": "/MM-iTalk/phuhuynh/",
+  "id": "/MM-iTalk/phuhuynh/app-v2",
   "name": "MM-iTalk Phụ huynh",
   "short_name": "MM Phụ huynh",
   "description": "Xem báo cáo luyện nói của con (chỉ xem, không ghi âm).",
   "lang": "vi",
-  "start_url": "./index.html",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
