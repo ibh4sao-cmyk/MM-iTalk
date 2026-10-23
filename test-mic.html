@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MM-iTalk · Thử micro</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+  .mono { font-family: Consolas, monospace; font-size: .9em; }
+  #log { max-height: 220px; overflow: auto; background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 10px; white-space: pre-wrap; }
+  .big-num { font-size: 2.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .pass { color: #167150; font-weight: 800; } .fail { color: #b9332d; font-weight: 800; }
+</style>
+</head>
+<body data-level="thcs">
+<div id="app">
+  <div class="topbar"><div><div class="logo">MM-<b>iTalk</b> · Thử micro</div><div class="tagline">Kiểm tra trước khi học</div></div><a class="btn alt sm" href="index.html">← Về app</a></div>
+
+  <div class="card mb">
+    <h2>Cần kiểm tra</h2>
+    <ul>
+      <li>Trình duyệt hỗ trợ nhận dạng giọng nói: <span id="srSupport"></span></li>
+      <li>Trình duyệt hỗ trợ ghi âm (MediaRecorder): <span id="mrSupport"></span></li>
+      <li>Địa chỉ trang: <span id="origin" class="mono"></span> (micro cần https hoặc localhost)</li>
+      <li>Có mạng: <span id="online"></span> (nhận dạng giọng nói của Chrome cần mạng)</li>
+    </ul>
+  </div>
+
+  <div class="card mb center">
+    <p>Bấm <b>Bắt đầu</b> rồi đọc to một đoạn văn bất kỳ. Thử nói liền 5 phút để biết nhận dạng có bị ngắt giữa chừng không.</p>
+    <div class="big-num" id="clock">0:00</div>
+    <p class="muted" id="state">Chưa bắt đầu</p>
+    <div class="row" style="justify-content:center">
+      <button class="btn big" id="btnStart">🎙️ Bắt đầu</button>
+      <button class="btn red big hidden" id="btnStop">⏹️ Dừng</button>
+    </div>
+  </div>
+
+  <div class="card mb">
+    <h3>Kết quả</h3>
+    <div class="metrics">
+      <div class="metric"><b id="mDur">–</b>thời gian</div>
+      <div class="metric"><b id="mWords">–</b>số từ nghe được</div>
+      <div class="metric"><b id="mRestarts">–</b>lần tự nối lại</div>
+      <div class="metric"><b id="mAudio">–</b>ghi âm</div>
+    </div>
+    <h3 class="mt">Máy nghe được</h3>
+    <div class="tx" id="text" style="min-height:60px"></div>
+    <h3 class="mt">Nghe lại</h3>
+    <div id="player" class="muted">Chưa có bản ghi.</div>
+    <h3 class="mt">Nhật ký</h3>
+    <div id="log" class="mono"></div>
+  </div>
+</div>
+<script src="js/speech.js"></script>
+<script>
+(function () {
+  var Sp = window.MMISpeech, sess = null, tick = null, t0 = 0, urlPrev = null;
+  var $ = function (id) { return document.getElementById(id); };
+  function mm(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function log(m) { var l = $('log'); l.textContent += '[' + mm((Date.now() - (t0 || Date.now())) / 1000) + '] ' + m + '\n'; l.scrollTop = l.scrollHeight; }
+  function yn(b) { return b ? '<span class="pass">Có</span>' : '<span class="fail">Không</span>'; }
+  $('srSupport').innerHTML = yn(Sp.supported); $('mrSupport').innerHTML = yn(!!window.MediaRecorder);
+  $('origin').textContent = location.origin + location.pathname; $('online').innerHTML = yn(navigator.onLine);
+  $('btnStart').onclick = function () {
+    $('log').textContent = ''; $('text').textContent = ''; t0 = Date.now();
+    sess = Sp.createSession({
+      recordAudio: true,
+      onUpdate: function (i) { $('text').textContent = i.text + (i.interim ? ' ' + i.interim : ''); $('mRestarts').textContent = i.restarts; },
+      onError: function (c) { log('Lỗi: ' + c); }
+    });
+    sess.start().then(function () { log('Đã bắt đầu (nhận dạng: ' + (Sp.supported ? 'bật' : 'không có') + ')'); });
+    $('btnStart').classList.add('hidden'); $('btnStop').classList.remove('hidden'); $('state').textContent = 'Đang nghe…';
+    tick = setInterval(function () { $('clock').textContent = mm((Date.now() - t0) / 1000); }, 250);
+  };
+  $('btnStop').onclick = function () {
+    clearInterval(tick); $('state').textContent = 'Đang xử lý…';
+    sess.stop().then(function (r) {
+      $('btnStop').classList.add('hidden'); $('btnStart').classList.remove('hidden'); $('state').textContent = 'Xong.';
+      $('mDur').textContent = mm(r.durationMs / 1000); $('mWords').textContent = Sp.countWords(r.text); $('mRestarts').textContent = r.restarts;
+      $('mAudio').textContent = r.audio ? Math.round(r.audio.size / 1024) + ' KB' : 'Không';
+      $('text').textContent = r.text || '(không nghe được chữ nào)';
+      log('Kết thúc. Nhận dạng ' + (r.gotSpeech ? 'có kết quả' : 'KHÔNG có kết quả') + '; lỗi: ' + (r.errors.join(', ') || 'không'));
+      if (r.audio) { if (urlPrev) URL.revokeObjectURL(urlPrev); urlPrev = URL.createObjectURL(r.audio); $('player').innerHTML = '<audio controls src="' + urlPrev + '" style="width:100%"></audio>'; }
+    });
+  };
+})();
+</script>
+</body>
+</html>
