@@ -333,6 +333,7 @@
     var P = sel(); if (!P) return frame('settings', '<div class="card soft">Chưa có hồ sơ nào.</div>');
     frame('settings',
       prefCards() +
+      '<div class="card mb"><h3>Nhạc nền trong app của con</h3><label class="chk"><input type="checkbox" data-chg="pmusic" ' + (S.settings().musicAllowed !== false ? 'checked' : '') + '><span>Cho phép nhạc nền (mặc định bật; nhạc tự tắt khi con đang nói). Tắt mục này thì con không bật được nhạc.</span></label></div>' +
       '<div class="card mb"><h3>Mở khóa chặng cho ' + esc(P.name) + '</h3><label class="chk"><input type="checkbox" data-chg="punlockall" ' + (P.unlockAll ? 'checked' : '') + '><span>Mở khóa tất cả các chặng (không cần xong Thử thách)</span></label></div>' +
       '<div class="card mb"><h3>Xem báo cáo trên điện thoại</h3><p class="muted">Xuất một file báo cáo (không có ghi âm) rồi mở trong app <b>MM-iTalk Phụ huynh</b> trên điện thoại, chỉ để xem. Dùng chung mật khẩu cha mẹ. Mỗi lần muốn cập nhật số liệu, hãy xuất lại file.</p><div class="row"><button class="btn sm" data-act="pexport">Xuất báo cáo cho điện thoại</button></div><p class="small mt">Địa chỉ app trên điện thoại: <b>' + esc(viewerUrl()) + '</b></p><p class="muted small">File gồm tên con, kết quả, chữ máy nghe được và mật khẩu đã mã hóa; hãy gửi qua kênh riêng của gia đình (Zalo của mình, email, Drive) và xóa sau khi mở.</p></div>' +
       '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này, không có trên điện thoại hay máy khác. Hãy sao lưu thỉnh thoảng. File sao lưu gồm cả hồ sơ, báo cáo và mật khẩu cha mẹ nhưng không gồm file ghi âm; có thể khôi phục trên máy khác để xem báo cáo.</p><div class="row"><button class="btn sm" data-act="backup">Sao lưu ra file</button><label class="btn alt sm">Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
@@ -451,6 +452,7 @@
       if (!st.customSamples[spLesson].length) delete st.customSamples[spLesson];
       spEdit = null; S.save(); viewSamples();
     };
+    chgs.pmusic = function (el) { if (!live()) return viewGate(); S.settings().musicAllowed = el.checked; S.save(); if (window.MMIMusic) window.MMIMusic.refresh(); A.toast(el.checked ? 'Đã cho phép nhạc nền.' : 'Đã tắt nhạc nền trong app của con.'); };
     chgs.punlockall = function (el) { if (!live()) return viewGate(); var P = sel(); P.unlockAll = el.checked; S.save(); A.toast(el.checked ? 'Đã mở tất cả các chặng.' : 'Đã khóa lại theo tiến độ.'); };
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' || !e.target || !e.target.id) return;

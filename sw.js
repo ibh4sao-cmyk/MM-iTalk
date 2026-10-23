@@ -1,5 +1,5 @@
 /* MM-iTalk service worker: lưu app vào máy để chạy offline sau lần mở đầu tiên. */
-var CACHE = 'mm-italk-v0.6.1';
+var CACHE = 'mm-italk-v0.7.0';
 var FILES = [
   './', './index.html', './manifest.webmanifest', './test-mic.html',
   './css/app.css', './css/pro.css',
@@ -14,7 +14,7 @@ var FILES = [
   './js/samples-thcs-c3.js',
   './js/samples-th-c4.js',
   './js/samples-thcs-c4.js',
-  './js/store.js', './js/speech.js', './js/mascot.js', './js/parent.js', './js/app.js',
+  './js/store.js', './js/speech.js', './js/mascot.js', './js/music.js', './js/parent.js', './js/app.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'
 ];
 self.addEventListener('install', function (e) {

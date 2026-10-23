@@ -562,10 +562,19 @@
   }
 
   /* ---------- Cài đặt ---------- */
+  function musicCard() {
+    var Mu = window.MMIMusic; if (!Mu) return '';
+    if (!Mu.allowed()) return '<div class="card mb"><h3>Nhạc nền</h3><p class="muted">Cha mẹ đang tắt nhạc nền trong app này.</p></div>';
+    var c = Mu.get();
+    return '<div class="card mb"><h3>Nhạc nền</h3><label class="chk"><input type="checkbox" data-chg="musicon" ' + (c.on ? 'checked' : '') + '><span>Bật nhạc nền (nhạc tự tắt khi em đang nói)</span></label>' +
+      '<div class="row mt"><label>Kiểu nhạc <select data-chg="musicstyle" style="width:auto">' + Mu.STYLES.map(function (s) { return '<option value="' + s[0] + '" ' + (c.style === s[0] ? 'selected' : '') + '>' + s[1] + '</option>'; }).join('') + '</select></label>' +
+      '<label>Âm lượng <select data-chg="musicvol" style="width:auto"><option value="s" ' + (c.vol === 's' ? 'selected' : '') + '>Nhỏ</option><option value="m" ' + (c.vol !== 's' ? 'selected' : '') + '>Vừa</option></select></label></div></div>';
+  }
   function viewSettings() {
     var P = profile(), st = S.settings();
     render(topbar(P, '/') + '<h1>⚙️ Cài đặt</h1>' +
       '<div class="card mb"><h3>Hồ sơ: ' + esc(P.name) + ' · ' + esc(levelLabel(P)) + '</h3><div class="row"><button class="btn alt sm" data-act="nav" data-to="/profiles">Đổi bạn / thêm hồ sơ</button></div></div>' +
+      musicCard() +
       '<div class="card mb"><h3>Tùy chọn</h3>' + (Sp.isMobile ? '<p class="muted small">Trên điện thoại, MM-iTalk tắt ghi âm để máy chuyển được lời nói thành chữ (hai việc này tranh nhau micro). Trên máy tính, em vẫn nghe lại được.</p>' : '<label class="chk"><input type="checkbox" data-chg="setrec" ' + (st.recAudio ? 'checked' : '') + '><span>Ghi âm để nghe lại (lưu trong máy)</span></label>') + '<label class="chk"><input type="checkbox" data-chg="settts" ' + (st.tts ? 'checked' : '') + '><span>Bật giọng đọc mẫu (nếu máy có giọng tiếng Việt)</span></label></div>' +
       '<div class="card mb"><h3>Dành cho cha mẹ</h3><p class="muted">Báo cáo học tập, xem lại bài của con, mở khóa chặng, sao lưu và xóa hồ sơ nằm trong Khu cha mẹ (cần mật khẩu).</p><button class="btn alt sm" data-act="nav" data-to="/parent">🔒 Vào Khu cha mẹ</button></div>' +
       '<div class="card mb"><h3>Kiểm tra micro</h3><p class="muted">Thử ghi âm và nhận dạng giọng nói trước khi học.</p><a class="btn alt sm" href="test-mic.html">🎤 Mở trang thử micro</a></div>' +
@@ -635,6 +644,9 @@
     else if (k === 'plan') ctx.reflect.plan[parseInt(el.getAttribute('data-i'), 10)] = el.checked;
     else if (k === 'vocab') ctx.vocab[el.getAttribute('data-w')] = el.checked;
     else if (k === 'setrec') { S.settings().recAudio = el.checked; S.save(); }
+    else if (k === 'musicon') window.MMIMusic.set({ on: el.checked });
+    else if (k === 'musicstyle') window.MMIMusic.set({ style: el.value });
+    else if (k === 'musicvol') window.MMIMusic.set({ vol: el.value });
     else if (k === 'settts') { S.settings().tts = el.checked; S.save(); }
     else if (k === 'restore') {
       var f = el.files && el.files[0]; if (!f) return;

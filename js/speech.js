@@ -88,6 +88,7 @@
     }
 
     function finish() {
+      if (window.MMIMusic) window.MMIMusic.release('mic');
       var done = stopResolve; stopResolve = null; clearTimeout(watchdog);
       var finalize = function (blob) {
         if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
@@ -110,6 +111,7 @@
       start: function () {
         segs = []; interim = ''; restarts = 0; errors = []; chunks = []; gotAny = false; dropped = false;
         startedAt = Date.now(); active = true;
+        if (window.MMIMusic) window.MMIMusic.hold('mic');
         return setupAudio().then(function () {
           if (!active) return;
           if (setupRecognition()) { try { rec.start(); } catch (e) { err('sr-start'); } }

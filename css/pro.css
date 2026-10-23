@@ -46,3 +46,4 @@ body.pro #toast { border-radius: 6px; background: #1f2937; }
 body.pro details summary { cursor: pointer; }
 body.pro .ptable td:nth-child(2) { min-width: 140px; }
 body.pro .ptable th, body.pro .ptable td { padding: 8px 10px; }
+body.pro #musicBtn { display: none !important; }

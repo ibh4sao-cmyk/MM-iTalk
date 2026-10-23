@@ -183,3 +183,9 @@ details.parent ul { margin: 4px 0 10px; padding-left: 22px; }
 .ptable th, .ptable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .ptable th { background: #f6f3ec; font-weight: 700; white-space: nowrap; }
 @media print { .topbar, .tabs, .btn, button { display: none !important; } }
+
+/* Nút nhạc nền */
+#musicBtn { position: fixed; right: 14px; bottom: 14px; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line); background: #fff; color: var(--primary); font-size: 20px; line-height: 1; z-index: 15; display: grid; place-items: center; box-shadow: 0 3px 10px rgba(43,42,76,.15); padding: 0; }
+#musicBtn.off { color: var(--mute); opacity: .75; }
+#musicBtn.off::after { content: ""; position: absolute; width: 26px; height: 3px; background: var(--mute); border-radius: 2px; transform: rotate(-45deg); }
+#musicBtn { position: fixed; }
