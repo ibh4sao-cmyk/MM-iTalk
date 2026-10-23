@@ -1,8 +1,8 @@
-# MM-iTalk — Nhìn · Nói · Viết
+# MM-iTalk — Nhìn · Nghĩ · Nói
 
 App luyện nói liên tục 3–5 phút cho học sinh Tiểu học (lớp 2–5) và THCS (lớp 6–9). Chạy trên Chrome (máy tính, Android), cài được lên máy như một ứng dụng. Không cần máy chủ, không có tài khoản; dữ liệu nằm trong trình duyệt của từng máy.
 
-**Phiên bản 0.1.1 (bản chạy thử):** Chặng 1, mỗi cấp 3 bài, vòng học 8 bước (Tiểu học) hoặc 9 bước (THCS, có bước Viết), sao, cửa hàng, Sổ từ, Nhật ký, Góc cha mẹ.
+**Phiên bản 0.1.2 (bản chạy thử):** Chặng 1, mỗi cấp 3 bài, vòng học 8 bước (không có bước gõ chữ, chỉ nói), sao, cửa hàng, Sổ từ, Nhật ký, Góc cha mẹ.
 
 ## Đưa lên GitHub Pages (kho riêng tên MM-iTalk)
 
@@ -20,7 +20,7 @@ Lưu ý: không mở `index.html` bằng cách bấm đúp (địa chỉ `file:/
 
 ## Cập nhật app
 
-Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.1.1';`) để máy đã cài tải bản mới.
+Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var CACHE = 'mm-italk-v0.1.2';`) để máy đã cài tải bản mới.
 
 ## Cấu trúc
 
@@ -33,4 +33,4 @@ Mỗi lần sửa nội dung, đổi số phiên bản trong `sw.js` (dòng `var
 
 ## Quyền riêng tư
 
-Ghi âm và bài viết chỉ lưu trong máy. Phần chuyển giọng nói thành chữ dùng dịch vụ nhận dạng của Chrome nên âm thanh được gửi qua mạng tới dịch vụ đó (Google) để xử lý.
+Ghi âm chỉ lưu trong máy. Phần chuyển giọng nói thành chữ dùng dịch vụ nhận dạng của Chrome nên âm thanh được gửi qua mạng tới dịch vụ đó (Google) để xử lý.

@@ -100,7 +100,7 @@ window.MMI_DATA = {
       { icon: '🪜', title: 'Gợi ý giảm dần', text: 'Ở các bài đầu, em có câu mẫu và từ khóa. Càng về sau, gợi ý càng ít để em tự xây dựng ý. Cuối cùng em chỉ nhận đề bài.' },
       { icon: '🎙️', title: 'Giải thích cho người chưa biết', text: 'Hãy tưởng tượng người nghe chưa biết gì về chủ đề. Nếu em giải thích rõ được cho họ, nghĩa là em đã hiểu thật sự. Đó là phương pháp Feynman.' },
       { icon: '🔍', title: 'Soi lại và học từ bài mẫu', text: 'Nghe lại, tự đánh dấu chỗ vấp và ngăn ý còn thiếu. Rồi đọc bài mẫu để học cấu trúc, từ ngữ và kỹ thuật diễn đạt.' },
-      { icon: '✍️', title: 'Nói lại và viết thành bài', text: 'Nói lần hai tốt hơn lần một, sau đó chỉnh lời nói thành bài viết hoàn chỉnh. Nói được thì viết được.' }
+      { icon: '🌟', title: 'Nói lại lần hai', text: 'Nói lần hai tốt hơn lần một: thêm ý còn thiếu, dùng từ mới, thêm ví dụ hoặc so sánh. App chỉ luyện nói, em không cần gõ chữ.' }
     ]
   },
 
@@ -119,7 +119,7 @@ window.MMI_DATA = {
       'Ép con nói đủ giờ; nếu con dừng sớm, để con nói lại lần sau.',
       'So sánh anh chị em; dùng sao để đe dọa hay phạt.'
     ],
-    privacy: 'Ghi âm và bài viết chỉ lưu trong máy này. Tuy nhiên phần chuyển giọng nói thành chữ dùng dịch vụ nhận dạng giọng nói của Chrome, nên âm thanh được gửi qua mạng tới dịch vụ đó để xử lý và máy cần có kết nối mạng. Chế độ nói tự do không được app lọc nội dung, nên cha mẹ nên thỉnh thoảng xem con nói gì.'
+    privacy: 'Ghi âm chỉ lưu trong máy này. Tuy nhiên phần chuyển giọng nói thành chữ dùng dịch vụ nhận dạng giọng nói của Chrome, nên âm thanh được gửi qua mạng tới dịch vụ đó để xử lý và máy cần có kết nối mạng. Chế độ nói tự do không được app lọc nội dung, nên cha mẹ nên thỉnh thoảng xem con nói gì.'
   },
 
   connectors: ['và', 'nhưng', 'vì', 'nên', 'khi', 'rồi', 'sau đó', 'còn', 'tuy nhiên', 'ngoài ra', 'đặc biệt', 'vì vậy', 'cuối cùng', 'trước tiên']

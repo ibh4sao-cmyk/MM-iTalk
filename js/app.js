@@ -1,4 +1,4 @@
-/* MM-iTalk - ứng dụng chính: màn hình, vòng học 8–9 bước, sao, cửa hàng, sổ tay. */
+/* MM-iTalk - ứng dụng chính: màn hình, vòng học 8 bước, sao, cửa hàng, sổ tay. */
 (function () {
   'use strict';
   var D = window.MMI_DATA, S = window.MMIStore, Sp = window.MMISpeech, M = window.MMIMascot;
@@ -41,7 +41,7 @@
   function topbar(P, back) {
     return '<div class="topbar"><div class="row">' +
       (back ? '<button class="btn alt sm" data-act="nav" data-to="' + back + '" aria-label="Quay lại">← Quay lại</button>' : '') +
-      '<div><div class="logo">MM-<b>iTalk</b></div>' + (back ? '' : '<div class="tagline">Nhìn – Nói – Viết</div>') + '</div></div>' +
+      '<div><div class="logo">MM-<b>iTalk</b></div>' + (back ? '' : '<div class="tagline">Nhìn – Nghĩ – Nói</div>') + '</div></div>' +
       (P ? '<div class="row"><span class="chip star" title="Số sao">⭐ <span id="starCount">' + P.stars + '</span></span><button class="chip" data-act="nav" data-to="/profiles" title="Đổi bạn">' + esc(P.name) + '</button></div>' : '') + '</div>';
   }
   function parentHTML(L) {
@@ -87,7 +87,7 @@
       '<div class="field"><label for="pLevel">Em đang học</label><select id="pLevel"><option value="th">Tiểu học (lớp 2–5)</option><option value="thcs">THCS (lớp 6–9)</option></select></div>' +
       '<div class="field"><label for="pGrade">Lớp</label><select id="pGrade"></select></div>' +
       '<button class="btn big" data-act="addprofile">Bắt đầu nào!</button></div>';
-    render('<div class="topbar"><div><div class="logo">MM-<b>iTalk</b></div><div class="tagline">Nhìn – Nói – Viết</div></div></div>' +
+    render('<div class="topbar"><div><div class="logo">MM-<b>iTalk</b></div><div class="tagline">Nhìn – Nghĩ – Nói</div></div></div>' +
       (ps.length ? '<h2>Ai đang học đây?</h2><div class="col mb">' + list + '</div>' : '') + form);
     fillGrades();
   }
@@ -145,21 +145,20 @@
   }
 
   /* ---------- Bài học ---------- */
-  var STEPS = ['Đề bài', 'Gợi ý', 'Chuẩn bị', 'Nói lần 1', 'Soi lại', 'Bài mẫu', 'Nói lần 2', 'Viết', 'Thưởng'];
+  var PLANS = ['Nói thêm ngăn ý còn thiếu', 'Dùng vài từ mới trong bài mẫu', 'Nói chậm và rõ hơn', 'Thêm một ví dụ hoặc một câu so sánh'];
+  var STEPS = ['Đề bài', 'Gợi ý', 'Chuẩn bị', 'Nói lần 1', 'Soi lại', 'Bài mẫu', 'Nói lần 2', 'Thưởng'];
   function viewLesson(id) {
     var L = findLesson(id), P = profile(); if (!L || L.level !== P.level) return nav('/');
-    ctx = { L: L, step: 0, level: L.hint, helped: false, att: [null, null], reflect: { silence: '', hard: '' }, check: null, readDone: false, writing: '', vocab: {}, prepped: {}, finished: false };
+    ctx = { L: L, step: 0, level: L.hint, helped: false, att: [null, null], reflect: { silence: '', plan: {} }, check: null, readDone: false, vocab: {}, prepped: {}, finished: false };
     L.sample.vocab.forEach(function (v) { ctx.vocab[v.w] = true; });
     renderStep();
   }
   function gc(i) { return D.ganColors[i % D.ganColors.length]; }
   function stepper() {
-    return '<div class="stepper" aria-label="Tiến độ">' + stepNames().map(function (_, i) { return '<i class="' + (i < stepNo() ? 'on' : (i === stepNo() ? 'cur' : '')) + '"></i>'; }).join('') + '</div>' +
-      '<div class="step-title"><span class="n">Bước ' + (stepNo() + 1) + '/' + stepNames().length + '</span><h2 style="margin:0">' + esc(stepNames()[stepNo()]) + '</h2></div>';
+    return '<div class="stepper" aria-label="Tiến độ">' + STEPS.map(function (_, i) { return '<i class="' + (i < ctx.step ? 'on' : (i === ctx.step ? 'cur' : '')) + '"></i>'; }).join('') + '</div>' +
+      '<div class="step-title"><span class="n">Bước ' + (ctx.step + 1) + '/' + STEPS.length + '</span><h2 style="margin:0">' + esc(STEPS[ctx.step]) + '</h2></div>';
   }
   function isTH() { var P = profile(); return !!P && P.level === 'th'; }
-  function stepNames() { return isTH() ? STEPS.filter(function (_, i) { return i !== 7; }) : STEPS; }
-  function stepNo() { return isTH() && ctx.step === 8 ? 7 : ctx.step; }
   function lessonFrame(inner) {
     render(topbar(profile(), '/') + '<h3 class="muted" style="margin-bottom:4px">' + (ctx.L.icon || D.kindIcon[ctx.L.kind]) + ' ' + esc(ctx.L.title) + '</h3>' + stepper() + inner + parentHTML(ctx.L));
   }
@@ -173,7 +172,6 @@
       case 4: return stepReview();
       case 5: return stepSample();
       case 6: return stepSpeak(1);
-      case 7: return stepWrite();
       default: return stepDone();
     }
   }
@@ -183,7 +181,7 @@
     lessonFrame('<div class="card"><div class="hello" style="grid-template-columns:auto 1fr">' + M.render(profile().equipped, { size: 'md' }) +
       '<div><h2>' + esc(L.title) + '</h2><p style="font-size:1.1em">' + esc(L.task) + '</p>' +
       '<div class="row"><span class="badge">Mục tiêu: ' + targetLabel(L.target) + '</span><span class="badge">' + L.ngan.length + ' ngăn ý</span><span class="badge">Gợi ý: ' + esc(D.hintNames[L.hint]) + '</span></div></div></div></div>' +
-      '<div class="card soft mt"><b>Vẹt con đang chờ!</b> Bạn ấy chưa biết gì về chủ đề này. Em hãy giải thích thật rõ cho bạn ấy hiểu nhé. Một bài học gồm ' + stepNames().length + ' bước, mất khoảng ' + (isTH() ? '15–25' : '20–35') + ' phút.</div>' +
+      '<div class="card soft mt"><b>Vẹt con đang chờ!</b> Bạn ấy chưa biết gì về chủ đề này. Em hãy giải thích thật rõ cho bạn ấy hiểu nhé. Một bài học gồm ' + STEPS.length + ' bước, mất khoảng ' + (isTH() ? '15–25' : '20–30') + ' phút.</div>' +
       '<div class="mt"><button class="btn big" data-act="step" data-n="1">Bắt đầu →</button></div>');
   }
 
@@ -216,7 +214,7 @@
   function consentCard(n) {
     return '<div class="card warn"><h3>Trước khi nói, cha mẹ và em cùng đọc nhé</h3><ul>' +
       '<li>Chrome sẽ hỏi quyền dùng <b>micro</b>. Em bấm "Cho phép".</li>' +
-      '<li>' + (isTH() ? 'Bản ghi âm' : 'Bản ghi âm và bài viết') + ' của em <b>chỉ lưu trong máy này</b>.</li>' +
+      '<li>Bản ghi âm của em (nếu có) <b>chỉ lưu trong máy này</b>.</li>' +
       '<li>Để chuyển lời nói thành chữ, Chrome gửi âm thanh qua mạng tới dịch vụ nhận dạng giọng nói của Google, nên máy cần có mạng.</li></ul>' +
       '<button class="btn" data-act="consent" data-n="' + n + '">Em và cha mẹ đã hiểu</button></div>';
   }
@@ -304,8 +302,7 @@
     var short = a.dur < 8 ? '<div class="card warn mt">Lần này hơi ngắn. Em có thể bấm "Nói lại" để thử lần nữa, hoặc đi tiếp cũng được.</div>' : '';
     var typed = '';
     if (!a.text) {
-      typed = '<div class="card warn mt"><b>Máy chưa nghe được chữ nào.</b> ' + (a.srOK ? 'Có thể micro nói nhỏ, nói quá xa micro hoặc máy không có mạng. ' : '') + (a.dropped ? 'App đã tắt ghi âm để máy nghe rõ hơn; em thử nói lại nhé. ' : '') + 'Em gõ lại vài câu em vừa nói nhé (không bắt buộc):' +
-        '<textarea id="typedTx" style="min-height:120px" placeholder="Gõ lại lời em đã nói…"></textarea><button class="btn sm mt" data-act="savetyped" data-n="' + n + '">Lưu lời em gõ</button></div>';
+      typed = '<div class="card warn mt"><b>Máy chưa nghe được chữ nào.</b> ' + (a.srOK ? 'Có thể micro nói nhỏ, nói quá xa micro hoặc máy không có mạng. ' : 'Trình duyệt này chưa chuyển được giọng nói thành chữ. ') + 'Không sao! App vẫn tính thời gian em nói. Em bấm "Tiếp tục" để học tiếp, hoặc "Nói lại" nếu muốn thử lần nữa.</div>';
     }
     var cmp = '';
     if (n === 1 && ctx.att[0]) {
@@ -313,7 +310,7 @@
       cmp = '<div class="card soft mt"><b>So với lần 1:</b><div class="metrics mt"><div class="metric"><b>' + (dd >= 0 ? '+' : '') + dd + 's</b>thời gian</div><div class="metric"><b>' + (a.words - b.words >= 0 ? '+' : '') + (a.words - b.words) + '</b>từ</div><div class="metric"><b>' + c1 + '→' + c2 + '</b>ngăn nghe thấy</div></div></div>';
     }
     el.innerHTML = '<div class="card mt"><div class="metrics"><div class="metric"><b>' + mmss(a.dur) + '</b>thời gian</div><div class="metric"><b>' + a.words + '</b>số từ</div><div class="metric"><b>' + (a.dur >= 10 && pace ? pace : '–') + '</b>từ mỗi phút</div></div></div>' + short + typed + cmp +
-      '<div class="row mt"><button class="btn alt" data-act="retry" data-n="' + n + '">🔁 Nói lại</button><button class="btn big" data-act="step" data-n="' + (n === 0 ? 4 : (isTH() ? 8 : 7)) + '">Tiếp tục →</button></div>';
+      '<div class="row mt"><button class="btn alt" data-act="retry" data-n="' + n + '">🔁 Nói lại</button><button class="btn big" data-act="step" data-n="' + (n === 0 ? 4 : 7) + '">Tiếp tục →</button></div>';
     var cl = document.getElementById('clock'); if (cl) cl.textContent = mmss(a.dur);
   }
 
@@ -340,7 +337,7 @@
       }).join('') + '<p class="muted small mt">Em tự tick theo trí nhớ của mình. Dấu "máy nghe thấy" chỉ là gợi ý.</p></div>' +
       '<div class="card mt"><h3>Hỏi bản thân như người dạy học</h3>' +
       '<p>1. Có chỗ nào em im lặng lâu không?</p><div class="row"><label class="chip"><input type="radio" name="sil" data-chg="sil" value="yes" ' + (ctx.reflect.silence === 'yes' ? 'checked' : '') + '> Có</label><label class="chip"><input type="radio" name="sil" data-chg="sil" value="no" ' + (ctx.reflect.silence === 'no' ? 'checked' : '') + '> Không</label></div>' +
-      '<p class="mt">2. Chỗ nào em thấy khó giải thích cho Vẹt con? Em muốn bổ sung gì ở lần hai?</p><textarea id="hardTx" data-chg="hard" style="min-height:90px">' + esc(ctx.reflect.hard) + '</textarea></div>' +
+      '<p class="mt">2. Lần hai, em muốn làm tốt hơn điều gì? (chạm để chọn)</p><div class="col">' + PLANS.map(function (t, k) { return '<label class="chk"><input type="checkbox" data-chg="plan" data-i="' + k + '" ' + (ctx.reflect.plan[k] ? 'checked' : '') + '><span class="lbl">' + esc(t) + '</span></label>'; }).join('') + '</div></div>' +
       '<div class="row mt"><button class="btn big" data-act="step" data-n="5">Xem bài mẫu →</button></div>');
   }
 
@@ -387,34 +384,6 @@
     });
   }
 
-  /* ----- Viết ----- */
-  function writeChecks(text) {
-    var t = text.trim(), sentences = t.split(/[.!?…]+\s*/).filter(function (x) { return x.trim(); });
-    var cap = sentences.length > 0 && sentences.every(function (x) { var c = x.trim().charAt(0); return c && c === c.toUpperCase() && c !== c.toLowerCase(); });
-    var punct = (t.match(/[.!?…]/g) || []).length >= 2;
-    var paras = t.split(/\n\s*\n/).filter(function (x) { return x.trim(); }).length >= 2;
-    var low = ' ' + Sp.norm(t) + ' ';
-    var conn = D.connectors.some(function (c) { return low.indexOf(' ' + Sp.norm(c) + ' ') >= 0; });
-    var newword = ctx.L.sample.vocab.some(function (v) { return low.indexOf(Sp.norm(v.w)) >= 0; });
-    return [
-      { ok: cap, t: 'Mỗi câu bắt đầu bằng chữ viết hoa' },
-      { ok: punct, t: 'Có dấu chấm (hoặc dấu chấm than) kết thúc câu' },
-      { ok: paras, t: 'Chia thành các đoạn, mỗi ngăn ý một đoạn (cách một dòng trống)' },
-      { ok: conn, t: 'Có từ nối như: và, nhưng, vì, nên, sau đó…' },
-      { ok: newword, t: 'Dùng ít nhất 1 từ mới học trong bài mẫu' }
-    ];
-  }
-  function checksHTML(text) { return writeChecks(text).map(function (c) { return '<div class="chk"><span>' + (c.ok ? '✅' : '⬜') + '</span><span>' + esc(c.t) + '</span></div>'; }).join(''); }
-  function stepWrite() {
-    var L = ctx.L;
-    if (!ctx.writing) ctx.writing = (ctx.att[1] && ctx.att[1].text) || (ctx.att[0] && ctx.att[0].text) || '';
-    lessonFrame('<p><b>Nói được thì viết được!</b> Dưới đây là lời em vừa nói. Máy chưa viết dấu chấm, dấu phẩy và chữ hoa, nên em hãy sửa thành một bài viết hoàn chỉnh. Em cũng có thể thêm ý hay hơn.</p>' +
-      '<div class="ngan-list">' + L.ngan.map(function (g, i) { return '<span class="ngan-pill" style="--c:' + gc(i) + ';opacity:1">' + (i + 1) + '. ' + esc(g.name) + '</span>'; }).join('') + '</div>' +
-      '<textarea id="writeTx" data-chg="write" placeholder="Viết bài của em ở đây…">' + esc(ctx.writing) + '</textarea>' +
-      '<div class="card soft mt"><h3>Bảng kiểm tra bài viết</h3><div id="wchecks">' + checksHTML(ctx.writing) + '</div><p class="muted small">Máy tự kiểm tra giúp em. Chỉ là gợi ý thôi nhé.</p></div>' +
-      '<div class="row mt"><button class="btn alt" data-act="skipwrite">Để sau</button><button class="btn big" data-act="finish">Hoàn thành bài →</button></div>');
-  }
-
   /* ----- Thưởng ----- */
   function stepDone() {
     var P = profile(), L = ctx.L, R = [];
@@ -423,14 +392,13 @@
       var prev = P.progress[L.id], repeat = prev && prev.done, a0 = ctx.att[0], a1 = ctx.att[1], total = 0;
       if (repeat) { R.push(['Luyện lại bài cũ', 2]); total = 2; }
       else {
-        R.push(['Hoàn thành ' + stepNames().length + ' bước', 3]);
+        R.push(['Hoàn thành ' + STEPS.length + ' bước', 3]);
         var c0 = a0 ? coverage(a0.text).filter(function (x) { return x >= 2; }).length : 0, c1 = a1 ? coverage(a1.text).filter(function (x) { return x >= 2; }).length : 0;
         if (a1 && a0 && (a1.dur > a0.dur || c1 > c0)) R.push(['Nói lần 2 dài hơn hoặc đủ ngăn hơn', 2]);
         if (ctx.readDone) R.push(['Đọc to bài mẫu', 1]);
-        var alltext = Sp.norm(((a1 && a1.text) || '') + ' ' + ctx.writing), used = L.sample.vocab.filter(function (v) { return alltext.indexOf(Sp.norm(v.w)) >= 0; }).length;
+        var alltext = Sp.norm((a1 && a1.text) || ''), used = L.sample.vocab.filter(function (v) { return alltext.indexOf(Sp.norm(v.w)) >= 0; }).length;
         if (used) R.push(['Dùng từ mới (' + Math.min(used, 3) + ' từ)', Math.min(used, 3)]);
-        if (!isTH() && words(ctx.writing) >= 10) R.push(['Hoàn thành bài viết', 1]);
-        if (!ctx.helped) R.push(['Tự lực (không mở thêm gợi ý)', 1]);
+                if (!ctx.helped) R.push(['Tự lực (không mở thêm gợi ý)', 1]);
         total = R.reduce(function (s, r) { return s + r[1]; }, 0);
       }
       var wk = S.weekKey(), arr = P.stamps[wk] || (P.stamps[wk] = []); arr.push(S.dayStr());
@@ -446,7 +414,7 @@
         if (a.audio) { key = P.id + '|' + L.id + '|' + (i + 1) + '|' + ts; S.audio.put(key, a.audio); }
         atts.push({ n: i + 1, dur: a.dur, words: a.words, text: a.text, key: key });
       });
-      P.progress[L.id] = { done: true, doneAt: ts, helped: ctx.helped, stars: (repeat && prev ? (prev.stars || 0) : 0) + total, attempts: atts, writing: ctx.writing, reflect: ctx.reflect };
+      P.progress[L.id] = { done: true, doneAt: ts, helped: ctx.helped, stars: (repeat && prev ? (prev.stars || 0) : 0) + total, attempts: atts, reflect: ctx.reflect };
       P.stars += total; P.lastDone = ts;
       var added = [];
       L.sample.vocab.forEach(function (v) {
@@ -493,7 +461,7 @@
         var pr = P.progress[id], L = findLesson(id); if (!L) return '';
         return '<div class="card soft mb"><div class="row between"><b>' + esc(L.title) + '</b><span class="muted small">' + dateVN(pr.doneAt) + ' · +' + (pr.stars || 0) + '⭐</span></div>' +
           pr.attempts.map(function (a) { return '<div class="row mt"><span class="badge">Lần ' + a.n + ': ' + mmss(a.dur) + ' · ' + a.words + ' từ</span>' + (a.key ? '<button class="btn alt sm" data-act="playclip" data-key="' + esc(a.key) + '">▶ Nghe lại</button>' : '') + '<span class="clip"></span></div>'; }).join('') +
-          (pr.writing ? '<details class="mt"><summary><b>Bài viết của em</b></summary><div class="tx mt" style="white-space:pre-wrap">' + esc(pr.writing) + '</div></details>' : '') + '</div>';
+          '</div>';
       }).join('') : '<div class="card soft">Chưa có bài nào trong nhật ký.</div>';
     }
     render(topbar(P, '/') + '<h1>📒 Sổ tay</h1><div class="tabs"><button class="chip ' + (tab === 'vocab' ? 'sel' : '') + '" data-act="nav" data-to="/book/vocab">Sổ từ (' + P.vocab.length + ')</button><button class="chip ' + (tab === 'diary' ? 'sel' : '') + '" data-act="nav" data-to="/book/diary">Nhật ký luyện nói</button></div>' + body);
@@ -532,19 +500,10 @@
     speakstart: function (el) { startSpeaking(parseInt(el.getAttribute('data-n'), 10)); },
     speakstop: function (el) { stopSpeaking(parseInt(el.getAttribute('data-n'), 10)); },
     retry: function (el) { ctx.att[parseInt(el.getAttribute('data-n'), 10)] = null; stepSpeak(parseInt(el.getAttribute('data-n'), 10)); },
-    savetyped: function (el) {
-      var n = parseInt(el.getAttribute('data-n'), 10), v = document.getElementById('typedTx').value.trim(); if (!v) return toast('Em gõ vài câu đã nói nhé.');
-      ctx.att[n].text = v; ctx.att[n].words = words(v); ctx.att[n].typed = true; ctx.att[n].segs = []; showSpeakResult(n); toast('Đã lưu lời em gõ.');
-    },
     tts: function (el) { Sp.speak(ctx.L.sample.paras[parseInt(el.getAttribute('data-i'), 10)]); },
     ttsword: function (el) { Sp.speak(el.getAttribute('data-w')); },
     readstart: function (el) { readStart(parseInt(el.getAttribute('data-i'), 10)); },
     readstop: function (el) { readStop(parseInt(el.getAttribute('data-i'), 10)); },
-    skipwrite: function () { ctx.writing = ''; goStep(8); },
-    finish: function () {
-      if (words(ctx.writing) < 10) { toast('Bài viết cần ít nhất 10 từ. Em viết thêm hoặc bấm "Để sau" nhé.'); return; }
-      goStep(8);
-    },
     again: function () { nav('/lesson/' + ctx.L.id); },
     buy: function (el) {
       var P = profile(), it = D.shop.filter(function (x) { return x.id === el.getAttribute('data-id'); })[0]; if (!it || P.stars < it.price) return;
@@ -578,6 +537,7 @@
     var el = e.target, k = el.getAttribute && el.getAttribute('data-chg'); if (!k) return;
     if (k === 'check') ctx.check[parseInt(el.getAttribute('data-i'), 10)] = el.checked;
     else if (k === 'sil') ctx.reflect.silence = el.value;
+    else if (k === 'plan') ctx.reflect.plan[parseInt(el.getAttribute('data-i'), 10)] = el.checked;
     else if (k === 'vocab') ctx.vocab[el.getAttribute('data-w')] = el.checked;
     else if (k === 'setrec') { S.settings().recAudio = el.checked; S.save(); }
     else if (k === 'settts') { S.settings().tts = el.checked; S.save(); }
@@ -587,12 +547,6 @@
       r.readAsText(f);
     }
   });
-  document.addEventListener('input', function (e) {
-    var el = e.target, k = el.getAttribute && el.getAttribute('data-chg'); if (!k) return;
-    if (k === 'hard') ctx.reflect.hard = el.value;
-    else if (k === 'write') { ctx.writing = el.value; var w = document.getElementById('wchecks'); if (w) w.innerHTML = checksHTML(el.value); }
-  });
-
   if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
