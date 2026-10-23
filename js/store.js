@@ -55,6 +55,7 @@
     removeProfile: function (id) {
       state.profiles = state.profiles.filter(function (p) { return p.id !== id; });
       if (state.active === id) state.active = state.profiles.length ? state.profiles[0].id : null;
+      state.audioKeys = (state.audioKeys || []).filter(function (k) { return k.indexOf(id + '|') !== 0; });
       save();
       Store.audio.removeByPrefix(id + '|');
     },
@@ -64,6 +65,7 @@
       var obj = JSON.parse(text);
       if (!obj || obj.app !== 'MM-iTalk' || !obj.data || !obj.data.profiles) throw new Error('Tệp không đúng định dạng MM-iTalk');
       state = obj.data; state.settings = Object.assign({ recAudio: true, tts: true, consent: false }, state.settings || {});
+      state.audioKeys = [];
       save();
     }
   };
@@ -94,6 +96,15 @@
   Store.audio = {
     put: function (key, blob) { return tx('readwrite', function (st) { st.put(blob, key); }).catch(function () {}); },
     get: function (key) { return tx('readonly', function (st) { return st.get(key); }).catch(function () { return null; }); },
+    /* Chỉ giữ MAX bản ghi âm gần nhất; bản cũ hơn bị xóa để nhẹ trình duyệt. */
+    MAX: 60,
+    register: function (key) {
+      state.audioKeys = state.audioKeys || [];
+      state.audioKeys.push(key);
+      while (state.audioKeys.length > Store.audio.MAX) { var old = state.audioKeys.shift(); Store.audio.remove(old); }
+      save();
+    },
+    remove: function (key) { return tx('readwrite', function (st) { st.delete(key); }).catch(function () {}); },
     removeByPrefix: function (prefix) {
       return db().then(function (d) {
         return new Promise(function (resolve) {

@@ -62,9 +62,11 @@
   function route() {
     stopAll();
     var h = (location.hash || '#/').slice(1), parts = h.split('/').filter(Boolean), P = profile();
-    if (!P && parts[0] !== 'profiles') return nav('/profiles');
+    if (parts[0] !== 'parent' && window.MMIParent) window.MMIParent.onLeave();
+    if (!P && parts[0] !== 'profiles' && parts[0] !== 'parent') return nav('/profiles');
     setLevelAttr();
     switch (parts[0]) {
+      case 'parent': return window.MMIParent ? window.MMIParent.view(parts) : viewHome();
       case 'profiles': return viewProfiles();
       case 'guide': return viewGuide(parseInt(parts[1] || '0', 10));
       case 'lesson': return viewLesson(parts[1]);
@@ -150,7 +152,7 @@
     render(topbar(P, null) +
       '<div class="card mb hello">' + M.render(P.equipped, { size: 'md' }) + '<div><h1>Chào ' + esc(P.name) + '!</h1><p class="muted">Vẹt con đang chờ nghe em kể chuyện. Mỗi tuần mình luyện 3 buổi nhé.</p>' +
       '<div class="row"><b>Tem tuần này:</b><div class="stamps">' + stamps + '</div></div>' +
-      '<div class="row mt"><button class="btn sm" data-act="nav" data-to="/free">🗣️ Nói tự do</button><button class="btn alt sm" data-act="nav" data-to="/shop">🛍️ Cửa hàng</button><button class="btn alt sm" data-act="nav" data-to="/book">📒 Sổ tay</button><button class="btn alt sm" data-act="nav" data-to="/guide/0">❓ Cách học</button><button class="btn alt sm" data-act="nav" data-to="/settings">⚙️ Cài đặt</button></div></div></div>' +
+      '<div class="row mt"><button class="btn sm" data-act="nav" data-to="/free">🗣️ Nói tự do</button><button class="btn alt sm" data-act="nav" data-to="/shop">🛍️ Cửa hàng</button><button class="btn alt sm" data-act="nav" data-to="/book">📒 Sổ tay</button><button class="btn alt sm" data-act="nav" data-to="/guide/0">❓ Cách học</button><button class="btn alt sm" data-act="nav" data-to="/settings">⚙️ Cài đặt</button><button class="btn ghost sm" data-act="nav" data-to="/parent">🔒 Cha mẹ</button></div></div></div>' +
       (Sp.isMobile ? '<div class="card warn mb">📱 Trên điện thoại, MM-iTalk tạm thời chỉ để xem nội dung. Để luyện nói và đếm từ, em hãy mở trên máy tính (Chrome) nhé.</div>' : '') +
       badgesHTML(P) + today + chHTML + parentHTML(null));
   }
@@ -432,16 +434,17 @@
       var ts = Date.now(), atts = [];
       [a0, a1].forEach(function (a, i) {
         if (!a) return; var key = null;
-        if (a.audio) { key = P.id + '|' + L.id + '|' + (i + 1) + '|' + ts; S.audio.put(key, a.audio); }
+        if (a.audio) { key = P.id + '|' + L.id + '|' + (i + 1) + '|' + ts; S.audio.put(key, a.audio); S.audio.register(key); }
         atts.push({ n: i + 1, dur: a.dur, words: a.words, text: a.text, key: key });
       });
-      P.progress[L.id] = { done: true, doneAt: ts, helped: ctx.helped, stars: (repeat && prev ? (prev.stars || 0) : 0) + total, attempts: atts, reflect: ctx.reflect };
+      var hist = prev && prev.done ? (prev.history || []).concat([{ t: prev.doneAt, helped: prev.helped, hint: prev.hint, R: prev.R, attempts: prev.attempts, reflect: prev.reflect, check: prev.check }]).slice(-5) : [];
+      P.progress[L.id] = { done: true, doneAt: ts, helped: ctx.helped, hint: ctx.level, stars: (repeat && prev ? (prev.stars || 0) : 0) + total, attempts: atts, reflect: ctx.reflect, check: ctx.check, R: ctx.R, history: hist };
       P.stars += total; P.lastDone = ts;
       var added = [];
       L.sample.vocab.forEach(function (v) {
         if (ctx.vocab[v.w] && !P.vocab.some(function (x) { return x.w === v.w; })) { P.vocab.push({ w: v.w, m: v.m, ex: v.ex, lesson: L.id, title: L.title, added: ts }); added.push(v.w); }
       });
-      ctx.added = added; S.save();
+      ctx.added = added; P.progress[L.id].added = added; S.save();
     }
     var eq = P.equipped || {};
     lessonFrame('<div class="card center"><div class="row" style="justify-content:center">' + M.render(eq, { size: 'lg' }) + '</div>' +
@@ -495,6 +498,11 @@
     if (a.dur >= 30 && f.count < 3) { gain = 2; f.count++; f.total = (f.total || 0) + 1; P.stars += gain; P.lastDone = Date.now(); S.save(); var sc = document.getElementById('starCount'); if (sc) sc.textContent = P.stars; }
     var pace = a.dur > 0 ? Math.round(a.words * 60 / a.dur) : 0, cov = coverage(a.text).filter(function (x) { return x >= 1; }).length;
     var url = ''; if (a.audio) { url = URL.createObjectURL(a.audio); urls.push(url); }
+    var fkey = null, fts = Date.now();
+    if (a.audio) { fkey = P.id + '|free|' + fts; S.audio.put(fkey, a.audio); S.audio.register(fkey); }
+    P.freeLog = (P.freeLog || []); P.freeLog.push({ t: fts, kind: ctx.kind, dur: a.dur, words: a.words, text: (a.text || '').slice(0, 6000), key: fkey, stars: gain });
+    if (P.freeLog.length > 200) P.freeLog = P.freeLog.slice(-200);
+    S.save();
     var msg = a.dur < 30 ? 'Lần này hơi ngắn, em thử nói thêm một ngăn ý nữa nhé. Em đã dám nói, thế là đáng khen rồi!' : pick(D.encourage.free).replace(/\{name\}/g, P.name);
     var note = a.dur < 30 ? '' : (gain ? '<div class="stars-big">+' + gain + ' ⭐</div>' : '<p class="muted">Hôm nay em đã nhận đủ sao cho phần Nói tự do. Em vẫn có thể luyện thêm nhé!</p>');
     el.innerHTML = '<div class="card mt center">' + note + '<p style="font-size:1.1em">' + esc(msg) + '</p><div class="metrics"><div class="metric"><b>' + mmss(a.dur) + '</b>thời gian</div><div class="metric"><b>' + a.words + '</b>số từ</div><div class="metric"><b>' + (a.dur >= 10 && pace ? pace : '–') + '</b>từ mỗi phút</div><div class="metric"><b>' + cov + '/' + ctx.L.ngan.length + '</b>ngăn nghe thấy</div></div>' +
@@ -538,16 +546,16 @@
   function viewSettings() {
     var P = profile(), st = S.settings();
     render(topbar(P, '/') + '<h1>⚙️ Cài đặt</h1>' +
-      '<div class="card mb"><h3>Hồ sơ: ' + esc(P.name) + ' · ' + esc(levelLabel(P)) + '</h3><div class="row"><button class="btn alt sm" data-act="nav" data-to="/profiles">Đổi bạn / thêm hồ sơ</button><button class="btn red sm" data-act="delprofile">Xóa hồ sơ này</button></div></div>' +
+      '<div class="card mb"><h3>Hồ sơ: ' + esc(P.name) + ' · ' + esc(levelLabel(P)) + '</h3><div class="row"><button class="btn alt sm" data-act="nav" data-to="/profiles">Đổi bạn / thêm hồ sơ</button></div></div>' +
       '<div class="card mb"><h3>Tùy chọn</h3>' + (Sp.isMobile ? '<p class="muted small">Trên điện thoại, MM-iTalk tắt ghi âm để máy chuyển được lời nói thành chữ (hai việc này tranh nhau micro). Trên máy tính, em vẫn nghe lại được.</p>' : '<label class="chk"><input type="checkbox" data-chg="setrec" ' + (st.recAudio ? 'checked' : '') + '><span>Ghi âm để nghe lại (lưu trong máy)</span></label>') + '<label class="chk"><input type="checkbox" data-chg="settts" ' + (st.tts ? 'checked' : '') + '><span>Bật giọng đọc mẫu (nếu máy có giọng tiếng Việt)</span></label></div>' +
-      '<div class="card mb"><h3>Dành cho cha mẹ</h3><label class="chk"><input type="checkbox" data-chg="unlockall" ' + (P.unlockAll ? 'checked' : '') + '><span>Mở khóa tất cả các chặng (không cần xong Thử thách)</span></label></div>' +
-      '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này. Nếu xóa dữ liệu trình duyệt, mọi thứ sẽ mất. Hãy sao lưu thỉnh thoảng (không gồm file ghi âm).</p><div class="row"><button class="btn sm" data-act="backup">⬇️ Sao lưu ra file</button><label class="btn alt sm">⬆️ Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
+      '<div class="card mb"><h3>Dành cho cha mẹ</h3><p class="muted">Báo cáo học tập, xem lại bài của con, mở khóa chặng, sao lưu và xóa hồ sơ nằm trong Khu cha mẹ (cần mật khẩu).</p><button class="btn alt sm" data-act="nav" data-to="/parent">🔒 Vào Khu cha mẹ</button></div>' +
       '<div class="card mb"><h3>Kiểm tra micro</h3><p class="muted">Thử ghi âm và nhận dạng giọng nói trước khi học.</p><a class="btn alt sm" href="test-mic.html">🎤 Mở trang thử micro</a></div>' +
       (deferredInstall ? '<div class="card mb"><h3>Cài ứng dụng</h3><button class="btn sm" data-act="install">📲 Cài MM-iTalk lên máy</button></div>' : '<div class="card mb"><h3>Cài ứng dụng</h3><p class="muted">Trên Chrome, bấm biểu tượng cài đặt ở thanh địa chỉ hoặc menu ⋮ → "Cài đặt MM-iTalk" (trên Android: "Thêm vào màn hình chính").</p></div>') +
       '<p class="muted small">MM-iTalk phiên bản ' + esc(D.version) + ' · bản chạy thử</p>' + (S.memoryOnly() ? '<div class="card warn">Trình duyệt đang chặn lưu dữ liệu.</div>' : ''));
   }
 
   /* ---------- Sự kiện ---------- */
+  var chgs = {};
   var acts = {
     nav: function (el) { nav(el.getAttribute('data-to')); },
     pickprofile: function (el) { S.setActive(el.getAttribute('data-id')); nav('/'); },
@@ -584,7 +592,7 @@
     },
     playclip: function (el) {
       S.audio.get(el.getAttribute('data-key')).then(function (blob) {
-        if (!blob) return toast('Không tìm thấy bản ghi âm này.');
+        if (!blob) return toast('Không còn bản ghi âm này (app chỉ giữ ' + S.audio.MAX + ' bản gần nhất).');
         var u = URL.createObjectURL(blob); urls.push(u);
         var holder = el.parentNode.querySelector('.clip'); holder.innerHTML = '<audio controls autoplay src="' + u + '"></audio>';
       });
@@ -592,9 +600,6 @@
     backup: function () {
       var blob = new Blob([S.exportJSON()], { type: 'application/json' }), a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = 'MM-iTalk-saoluu-' + S.dayStr() + '.json'; document.body.appendChild(a); a.click(); a.remove();
-    },
-    delprofile: function () {
-      var P = profile(); if (confirm('Xóa hồ sơ "' + P.name + '" cùng toàn bộ bài làm và ghi âm? Việc này không thể hoàn lại.')) { S.removeProfile(P.id); nav('/profiles'); }
     },
     install: function () { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } }
   };
@@ -604,12 +609,12 @@
   });
   document.addEventListener('change', function (e) {
     var el = e.target, k = el.getAttribute && el.getAttribute('data-chg'); if (!k) return;
+    if (chgs[k]) return chgs[k](el);
     if (k === 'check') ctx.check[parseInt(el.getAttribute('data-i'), 10)] = el.checked;
     else if (k === 'sil') ctx.reflect.silence = el.value;
     else if (k === 'plan') ctx.reflect.plan[parseInt(el.getAttribute('data-i'), 10)] = el.checked;
     else if (k === 'vocab') ctx.vocab[el.getAttribute('data-w')] = el.checked;
     else if (k === 'setrec') { S.settings().recAudio = el.checked; S.save(); }
-    else if (k === 'unlockall') { var Pp = profile(); Pp.unlockAll = el.checked; S.save(); toast(el.checked ? 'Đã mở tất cả các chặng.' : 'Đã khóa lại theo tiến độ.'); }
     else if (k === 'settts') { S.settings().tts = el.checked; S.save(); }
     else if (k === 'restore') {
       var f = el.files && el.files[0]; if (!f) return;
@@ -620,5 +625,9 @@
   if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
+  if (window.MMIParent) window.MMIParent.init({
+    esc: esc, mmss: mmss, targetLabel: targetLabel, render: render, topbar: topbar, nav: nav, toast: toast,
+    findLesson: findLesson, lessonsOf: lessonsOf, levelLabel: levelLabel, PLANS: PLANS, acts: acts, chgs: chgs
+  });
   route();
 })();

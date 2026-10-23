@@ -177,3 +177,9 @@ details.parent ul { margin: 4px 0 10px; padding-left: 22px; }
   .ring { width: 180px; height: 180px; }
 }
 @media (prefers-reduced-motion: reduce) { .parrot, .parrot.talk .beak, .rec-dot { animation: none; } }
+
+/* Khu cha mẹ */
+.ptable { width: 100%; border-collapse: collapse; font-size: .92em; }
+.ptable th, .ptable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.ptable th { background: #f6f3ec; font-weight: 700; white-space: nowrap; }
+@media print { .topbar, .tabs, .btn, button { display: none !important; } }
