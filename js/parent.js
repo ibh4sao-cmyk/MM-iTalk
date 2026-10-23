@@ -4,7 +4,7 @@
   'use strict';
   var A = null; // api do app.js đưa vào
   var D = window.MMI_DATA, S = window.MMIStore, Sp = window.MMISpeech;
-  var pAuth = { ok: false, t: 0 }, pSel = null, IDLE = 10 * 60 * 1000;
+  var pAuth = { ok: false, t: 0 }, pSel = null, IDLE = 10 * 60 * 1000, RO = false; // RO: bản chỉ-xem trên điện thoại
 
   /* ---------- tiện ích ---------- */
   function esc(s) { return A.esc(s); }
@@ -82,11 +82,13 @@
 
   /* ---------- khung chung ---------- */
   var TABS = [['overview', 'Tổng quan'], ['lessons', 'Từng bài'], ['progress', 'Tiến bộ'], ['samples', 'Ví dụ của cha mẹ'], ['ai', 'Nhận xét AI'], ['settings', 'Cài đặt cha mẹ']];
+  function tabsOf() { return RO ? TABS.filter(function (t) { return t[0] === 'overview' || t[0] === 'lessons' || t[0] === 'progress'; }) : TABS; }
   function frame(tab, inner) {
     var P = sel(), ps = S.profiles();
     var chooser = ps.length > 1 ? '<label class="chip">Con: <select data-chg="psel" style="border:0;background:transparent;font:inherit;font-weight:700">' + ps.map(function (p) { return '<option value="' + esc(p.id) + '" ' + (P && p.id === P.id ? 'selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select></label>' : (P ? '<span class="chip">Con: ' + esc(P.name) + '</span>' : '');
-    A.render(A.topbar(null, '/') + '<div class="row between mb"><h1 style="margin:0">🔒 Khu cha mẹ</h1><div class="row">' + chooser + '<button class="btn alt sm" data-act="plock">🔓 Khóa và thoát</button></div></div>' +
-      '<div class="tabs">' + TABS.map(function (t) { return '<button class="chip ' + (t[0] === tab ? 'sel' : '') + '" data-act="nav" data-to="/parent/' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' + inner);
+    A.render(A.topbar(null, '/') + '<div class="row between mb"><h1 style="margin:0">' + (RO ? '📱 Báo cáo cho cha mẹ' : '🔒 Khu cha mẹ') + '</h1><div class="row">' + chooser + '<button class="btn alt sm" data-act="plock">🔓 Khóa và thoát</button></div></div>' +
+      (RO && A.stamp ? '<p class="muted small" style="margin-top:-6px">' + A.stamp() + '</p>' : '') +
+      '<div class="tabs">' + tabsOf().map(function (t) { return '<button class="chip ' + (t[0] === tab ? 'sel' : '') + '" data-act="nav" data-to="/parent/' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div>' + inner);
   }
   function gateFrame(inner) { A.render(A.topbar(null, '/') + '<h1>🔒 Khu cha mẹ</h1>' + inner); }
 
@@ -107,7 +109,7 @@
       (locked ? '<p style="color:#b9332d">Nhập sai nhiều lần. Hãy thử lại sau ' + Math.ceil((ps.lockUntil - Date.now()) / 1000) + ' giây.</p>' : '') +
       '<div class="col" style="max-width:360px"><input id="pw1" type="password" autocomplete="current-password" placeholder="Mật khẩu" style="width:100%;padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px">' +
       '<button class="btn" data-act="pglogin">Vào</button>' +
-      '<button class="btn ghost sm" data-act="pgforgot">Quên mật khẩu? Dùng mã khôi phục</button></div></div>');
+      (RO ? '<p class="muted small">Quên mật khẩu? Trên máy tính, vào Khu cha mẹ, đặt mật khẩu mới rồi xuất lại file báo cáo và mở nó ở đây.</p>' : '<button class="btn ghost sm" data-act="pgforgot">Quên mật khẩu? Dùng mã khôi phục</button>') + '</div></div>' + (A.gateExtra ? A.gateExtra() : ''));
   }
   function viewForgot(msg) {
     gateFrame('<div class="card"><h2>Khôi phục mật khẩu</h2><p class="muted">Nhập mã khôi phục 8 ký tự đã ghi lại khi tạo mật khẩu, rồi đặt mật khẩu mới.</p>' +
@@ -194,7 +196,7 @@
     if (!f.length) return '';
     return '<div class="card mt"><h3>Nhật ký Nói tự do (30 lần gần nhất)</h3>' + f.map(function (x) {
       return '<div class="row mb" style="border-bottom:1px solid var(--line);padding-bottom:8px"><span class="badge">' + dtm(x.t) + '</span><b>' + esc(D.kinds[x.kind] || x.kind) + '</b><span>' + mmss(x.dur) + ' · ' + x.words + ' từ' + (x.stars ? ' · +' + x.stars + '⭐' : '') + '</span>' +
-        (x.key ? '<button class="btn alt sm" data-act="playclip" data-key="' + esc(x.key) + '">▶ Nghe lại</button><span class="clip"></span>' : '') +
+        (x.key && !RO ? '<button class="btn alt sm" data-act="playclip" data-key="' + esc(x.key) + '">▶ Nghe lại</button><span class="clip"></span>' : '') +
         (x.text ? '<details style="flex-basis:100%"><summary class="small muted">Xem chữ máy nghe được</summary><p>' + esc(x.text) + '</p></details>' : '') + '</div>';
     }).join('') + '</div>';
   }
@@ -202,7 +204,7 @@
     if (!a) return '<div class="card soft mb"><b>' + label + '</b><p class="muted">Không có dữ liệu.</p></div>';
     var cov = a.text ? covOf(a.text, L.ngan) : null;
     return '<div class="card soft mb"><div class="row between"><b>' + label + '</b><span class="badge">' + mmss(a.dur) + ' · ' + a.words + ' từ · ' + (wpm(a) || '–') + ' từ/phút</span></div>' +
-      (a.key ? '<div class="row mt"><button class="btn alt sm" data-act="playclip" data-key="' + esc(a.key) + '">▶ Nghe lại</button><span class="clip"></span></div>' : '<p class="muted small mt">Không có ghi âm (điện thoại không ghi, hoặc ghi âm cũ đã được xóa).</p>') +
+      (RO ? '' : a.key ? '<div class="row mt"><button class="btn alt sm" data-act="playclip" data-key="' + esc(a.key) + '">▶ Nghe lại</button><span class="clip"></span></div>' : '<p class="muted small mt">Không có ghi âm (điện thoại không ghi, hoặc ghi âm cũ đã được xóa).</p>') +
       (cov ? '<div class="kws mt">' + L.ngan.map(function (g, i) { return '<span class="kw" style="' + (cov[i] >= 2 ? 'background:#dff6e9' : 'opacity:.55') + '">' + (cov[i] >= 2 ? '✔ ' : '') + (i + 1) + '. ' + esc(g.name) + '</span>'; }).join('') + '</div>' : '') +
       '<details class="mt"><summary class="small">Văn bản máy nghe được</summary><p>' + (a.text ? esc(a.text) : '<span class="muted">Máy không nghe được chữ nào lần này.</span>') + '</p></details></div>';
   }
@@ -272,7 +274,7 @@
     frame('progress', '<div class="card mb"><h2>Đánh giá tiến bộ · ' + esc(P.name) + '</h2>' +
       '<ul>' + insights(ss, P).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
       '<p class="muted small">Nhận xét được tính tự động từ số liệu, chỉ nói về nỗ lực và sự tiến bộ của chính con, không so với bạn khác và không chấm điểm.</p></div>' +
-      '<div class="card mb"><h3>Thời lượng nói so với mục tiêu qua các buổi</h3>' + (pts.length ? lineChart(pts, 640, 220) + '<p class="muted small">100% (đường xanh nét đứt) là đúng thời lượng tối thiểu mục tiêu của bài. Rê chuột vào từng chấm để xem bài.</p>' : '<p class="muted">Chưa có dữ liệu.</p>') + '</div>' +
+      '<div class="card mb"><h3>Thời lượng nói so với mục tiêu qua các buổi</h3>' + (pts.length ? lineChart(pts, 640, 220) + '<p class="muted small">100% (đường xanh nét đứt) là đúng thời lượng tối thiểu mục tiêu của bài. Rê chuột (hoặc chạm giữ) vào từng chấm để xem bài.</p>' : '<p class="muted">Chưa có dữ liệu.</p>') + '</div>' +
       '<div class="card mb"><h3>Tóm tắt theo chặng</h3>' + (rows ? '<div style="overflow-x:auto"><table class="ptable"><thead><tr><th>Chặng</th><th>Số buổi</th><th>Thời lượng / mục tiêu</th><th>Từ mỗi phút</th><th>Ngăn đủ (TB)</th><th>Lần 2 tốt hơn lần 1</th><th>Tự lực</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="muted">Chưa có dữ liệu.</p>') + '<p class="muted small mt">Số từ và ngăn ý do máy nhận dạng giọng nói ước lượng (giọng vùng miền và trẻ nhỏ có thể bị nghe sai), nên hãy xem như tham khảo và nghe lại ghi âm khi cần.</p></div>');
   }
 
@@ -314,9 +316,27 @@
     var P = sel(); if (!P) return frame('settings', '<div class="card soft">Chưa có hồ sơ nào.</div>');
     frame('settings',
       '<div class="card mb"><h3>Mở khóa chặng cho ' + esc(P.name) + '</h3><label class="chk"><input type="checkbox" data-chg="punlockall" ' + (P.unlockAll ? 'checked' : '') + '><span>Mở khóa tất cả các chặng (không cần xong Thử thách)</span></label></div>' +
+      '<div class="card mb"><h3>📱 Xem báo cáo trên điện thoại</h3><p class="muted">Xuất một file báo cáo (không có ghi âm) rồi mở trong app <b>MM-iTalk Phụ huynh</b> trên điện thoại, chỉ để xem. Dùng chung mật khẩu cha mẹ. Mỗi lần muốn cập nhật số liệu, hãy xuất lại file.</p><div class="row"><button class="btn sm" data-act="pexport">📤 Xuất báo cáo cho điện thoại</button></div><p class="small mt">Địa chỉ app trên điện thoại: <b>' + esc(viewerUrl()) + '</b></p><p class="muted small">File gồm tên con, kết quả, chữ máy nghe được và mật khẩu đã mã hóa; hãy gửi qua kênh riêng của gia đình (Zalo của mình, email, Drive) và xóa sau khi mở.</p></div>' +
       '<div class="card mb"><h3>Sao lưu dữ liệu</h3><p class="muted">Dữ liệu chỉ nằm trong trình duyệt của máy này, không có trên điện thoại hay máy khác. Hãy sao lưu thỉnh thoảng. File sao lưu gồm cả hồ sơ, báo cáo và mật khẩu cha mẹ nhưng không gồm file ghi âm; có thể khôi phục trên máy khác để xem báo cáo.</p><div class="row"><button class="btn sm" data-act="backup">⬇️ Sao lưu ra file</button><label class="btn alt sm">⬆️ Khôi phục từ file<input type="file" accept=".json,application/json" data-chg="restore" style="display:none"></label></div></div>' +
       '<div class="card mb"><h3>Đổi mật khẩu</h3><div class="col" style="max-width:360px"><input id="pwOld" type="password" placeholder="Mật khẩu hiện tại" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px"><input id="pwNew" type="password" placeholder="Mật khẩu mới (từ 6 ký tự)" style="padding:10px;font:inherit;border:2px solid var(--line);border-radius:10px"><button class="btn sm" data-act="pchange">Đổi mật khẩu và tạo mã khôi phục mới</button></div></div>' +
       '<div class="card mb"><h3>Xóa hồ sơ</h3><p class="muted">Xóa hồ sơ "' + esc(P.name) + '" cùng toàn bộ bài làm và ghi âm. Không thể hoàn lại.</p><button class="btn red sm" data-act="pdel">Xóa hồ sơ này</button></div>');
+  }
+
+  function viewerUrl() { try { return new URL('phuhuynh/', location.href).href.replace(/index\.html$/, ''); } catch (e) { return 'phuhuynh/'; } }
+  function stripKeys(P) {
+    function at(list) { (list || []).forEach(function (x) { if (x) delete x.key; }); }
+    Object.keys(P.progress || {}).forEach(function (id) {
+      var pr = P.progress[id]; if (!pr) return; at(pr.attempts);
+      (pr.history || []).forEach(function (h) { at(h.attempts); });
+    });
+    at(P.freeLog);
+    return P;
+  }
+  function buildReport() {
+    var st = S.get(), ps = st.parent || {};
+    var data = JSON.parse(JSON.stringify({ v: st.v || 1, profiles: st.profiles, active: st.active, parent: { salt: ps.salt, hash: ps.hash, fails: 0, lockUntil: 0 } }));
+    data.profiles.forEach(stripKeys);
+    return JSON.stringify({ app: 'MM-iTalk-report', v: 1, exported: Date.now(), appVersion: D.version, data: data });
   }
 
   /* ---------- điều hướng ---------- */
@@ -336,7 +356,7 @@
   function onLeave() { lock(); }
 
   function init(api) {
-    A = api;
+    A = api; RO = !!api.readonly;
     var acts = A.acts, chgs = A.chgs;
     function val(id) { var e = document.getElementById(id); return e ? e.value : ''; }
     acts.pgsetup = function () {
@@ -363,7 +383,14 @@
         setPassword(pw).then(function (nc) { pAuth = { ok: true, t: Date.now() }; viewRecoveryCode(nc); });
       });
     };
-    acts.plock = function () { lock(); A.nav('/'); };
+    acts.plock = function () { lock(); A.nav(RO ? '/parent' : '/'); };
+    acts.pexport = function () {
+      if (!live()) return viewGate();
+      if (!pstate()) return A.toast('Hãy tạo mật khẩu cha mẹ trước.');
+      var blob = new Blob([buildReport()], { type: 'application/json' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'MM-iTalk-baocao-' + S.dayStr() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+      A.toast('Đã tạo file báo cáo. Gửi file này sang điện thoại rồi mở trong app Phụ huynh.');
+    };
     acts.pchange = function () {
       var ps = pstate(), pn = val('pwNew'); if (!live()) return viewGate();
       if (pn.length < 6) return A.toast('Mật khẩu mới cần từ 6 ký tự.');

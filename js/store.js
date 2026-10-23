@@ -1,7 +1,7 @@
 /* MM-iTalk - Lưu dữ liệu trong máy: localStorage (hồ sơ, sao, tiến độ) + IndexedDB (ghi âm). */
 (function () {
   'use strict';
-  var KEY = 'mmit:v1';
+  var KEY = window.MMI_STORE_KEY || 'mmit:v1'; // app phụ huynh (phuhuynh/) dùng khóa riêng
   var memoryOnly = false;
   var state = load();
 
